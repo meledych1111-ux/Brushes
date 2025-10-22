@@ -1,91 +1,104 @@
-// core engine: hi-dpi, undo/redo, pointer-events
-window.core = (() => {
-  const canvas = document.getElementById('canvas');
+(() => {
+  const canvas = document.getElementById('mainCanvas');
   const ctx = canvas.getContext('2d');
-  let painting = false;
-  let lastX = 0, lastY = 0;
-  
-  /* 0.1 Утилиты */
-const dist = (x1, y1, x2, y2) => Math.hypot(x2 - x1, y2 - y1);
 
-  /* 0. Заглушка до загрузки main.js (чтобы не было ReferenceError) */
-  window.drawBrush = (x, y, pressure = 1) => {
-  const ctx = window.core.ctx;
-  ctx.fillStyle = 'red';
-  ctx.beginPath();
-  ctx.arc(x, y, 5 * pressure, 0, Math.PI * 2);
-  ctx.fill();
-};
+  let dpr = window.devicePixelRatio || 1;
 
-  /* 1. Отключаем поведение Safari «только стилус» */
-  canvas.style.touchAction = 'none';
+  function viewportSize() {
+    const w = window.innerWidth;
+    const h = window.innerHeight - document.getElementById('toolbar').offsetHeight;
+    return { w, h };
+  }
 
-  /* 2. Hi-DPI */
-  function resize() {
-    const dpr = window.devicePixelRatio || 1;
-    const rect = canvas.getBoundingClientRect();
-    canvas.width = rect.width * dpr;
-    canvas.height = rect.height * dpr;
+  function resizeCanvas() {
+    const { w, h } = viewportSize();
+    dpr = window.devicePixelRatio || 1;
+
+    // сохраняем текущий холст как изображение для безопасного ресайза
+    const snapshot = canvas.width && canvas.height ? canvas.toDataURL('image/png') : null;
+
+    canvas.width = Math.max(1, Math.floor(w * dpr));
+    canvas.height = Math.max(1, Math.floor(h * dpr));
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.scale(dpr, dpr);
-  }
-  window.addEventListener('resize', resize);
-  resize();
 
-  /* 3. Undo/Redo (30 шагов) */
-  const history = [];
-  let step = -1;
-  function saveState() {
-    step++;
-    if (step < history.length) history.length = step;
-    history.push(canvas.toDataURL());
-    if (history.length > 30) history.shift(), step--;
-  }
-  window.undo = () => {
-    if (step > 0) {
-      step--;
+    if (snapshot) {
       const img = new Image();
-      img.src = history[step];
-      img.onload = () => (ctx.clearRect(0, 0, canvas.width, canvas.height), ctx.drawImage(img, 0, 0));
+      img.onload = () => {
+        ctx.clearRect(0, 0, w, h);
+        ctx.drawImage(img, 0, 0, w, h);
+        window.App.saveState(); // фиксируем состояние после ресайза
+      };
+      img.src = snapshot;
     }
-  };
-  window.redo = () => {
-    if (step < history.length - 1) {
-      step++;
-      const img = new Image();
-      img.src = history[step];
-      img.onload = () => (ctx.clearRect(0, 0, canvas.width, canvas.height), ctx.drawImage(img, 0, 0));
-    }
-  };
-
-  /* 4. Pointer-events: ПАЛЕЦ + СТИЛУС (passive: false) */
-  function getPos(e) {
-    const rect = canvas.getBoundingClientRect();
-    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
   }
-  canvas.addEventListener('pointerdown', e => {
-    painting = true;
-    const p = getPos(e);
-    lastX = p.x;
-    lastY = p.y;
-    window.drawBrush(p.x, p.y, e.pressure || 1);
-    saveState();
-  }, { passive: false });
 
-  canvas.addEventListener('pointermove', e => {
-    if (!painting) return;
-    const p = getPos(e);
-    window.drawBrush(p.x, p.y, e.pressure || 1);
-    lastX = p.x;
-    lastY = p.y;
-  }, { passive: false });
-
-  window.addEventListener('pointerup', () => {
-    painting = false;
-    window.lastFigure = null;
-    window.lastRuler = null;
+  window.addEventListener('resize', () => {
+    resizeCanvas();
+    if (window.Layers && window.Layers.resizeAll) {
+      window.Layers.resizeAll(); // ресайз дополнительных слоев
+    }
   });
-  canvas.addEventListener('pointerleave', () => painting = false);
 
-  /* 5. Публичное API */
-  return { canvas, ctx, saveState };
+  // История
+  const history = [];
+  let historyStep = -1;
+
+  function saveState() {
+    const { w, h } = viewportSize();
+    // снимаем состояния только с базового холста (сведённые слои)
+    const dataUrl = canvas.toDataURL('image/png');
+    if (historyStep < history.length - 1) history.splice(historyStep + 1);
+    history.push({ dataUrl, w, h });
+    historyStep++;
+  }
+
+  function restoreState(entry) {
+    const img = new Image();
+    img.onload = () => {
+      const { w, h } = viewportSize();
+      ctx.clearRect(0, 0, w, h);
+      ctx.drawImage(img, 0, 0, w, h);
+    };
+    img.src = entry.dataUrl;
+  }
+
+  function undo() {
+    if (historyStep > 0) {
+      historyStep--;
+      restoreState(history[historyStep]);
+    }
+  }
+
+  function redo() {
+    if (historyStep < history.length - 1) {
+      historyStep++;
+      restoreState(history[historyStep]);
+    }
+  }
+
+  function clearCanvas() {
+    const { w, h } = viewportSize();
+    ctx.clearRect(0, 0, w, h);
+    saveState();
+  }
+
+  // Экспорт
+  window.App = {
+    canvas,
+    ctx,
+    saveState,
+    undo,
+    redo,
+    clearCanvas,
+    getDpr: () => dpr
+  };
+
+  // Инициализация
+  resizeCanvas();
+  saveState();
 })();
+
