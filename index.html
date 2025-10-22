@@ -3,23 +3,65 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no"/>
-  <title>ArtFlow Pro - Цифровая живопись</title>
+  <title>ArtFlow Pro - Расширенная цифровая живопись</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+  <!-- Мобильная панель инструментов -->
+  <div class="mobile-toolbar" id="mobileToolbar">
+    <button class="mobile-toggle" id="mobileToggle">🎨</button>
+    <div class="mobile-controls">
+      <input type="color" id="mobileColor" value="#007aff">
+      <input type="range" id="mobileSize" min="1" max="100" value="20">
+      <button id="mobileMenu">☰</button>
+    </div>
+  </div>
+
   <aside class="panel" id="toolbar" aria-label="Панель инструментов">
     <header class="panel-header">
       <h1>🎨 ArtFlow Pro</h1>
+      <button class="panel-toggle" id="panelToggle">◀</button>
     </header>
+
+    <!-- Быстрый доступ -->
+    <section class="control-group quick-access">
+      <div class="quick-controls">
+        <input type="color" id="quickColor" value="#007aff" title="Быстрый выбор цвета">
+        <div class="size-presets">
+          <button class="size-btn" data-size="5">S</button>
+          <button class="size-btn" data-size="20">M</button>
+          <button class="size-btn" data-size="50">L</button>
+        </div>
+      </div>
+    </section>
 
     <!-- Кисти -->
     <section class="control-group" aria-labelledby="brush-section">
-      <h3 id="brush-section" class="control-group-title">КИСТИ</h3>
+      <h3 id="brush-section" class="control-group-title">
+        КИСТИ 
+        <span class="badge" id="brushCount">60+</span>
+      </h3>
+      
+      <div class="control">
+        <label class="control-label" for="brushCategory">
+          <span>Категория</span>
+        </label>
+        <select id="brushCategory">
+          <option value="all">Все кисти</option>
+          <option value="basic">Базовые</option>
+          <option value="paint">Живопись</option>
+          <option value="texture">Текстуры</option>
+          <option value="anime">Аниме</option>
+          <option value="3d">3D материалы</option>
+          <option value="special">Специальные</option>
+        </select>
+      </div>
+      
       <div class="control">
         <label class="control-label" for="brushSelect">
           <span>Тип кисти</span>
         </label>
-        <select id="brushSelect" aria-describedby="brush-section"></select>
+        <select id="brushSelect"></select>
       </div>
       
       <div class="control">
@@ -27,7 +69,7 @@
           <span>Размер</span>
           <output id="sizeOut" aria-live="polite">20</output>
         </label>
-        <input type="range" id="sizeSlider" min="1" max="100" value="20" aria-label="Размер кисти">
+        <input type="range" id="sizeSlider" min="1" max="200" value="20">
       </div>
       
       <div class="control">
@@ -35,77 +77,297 @@
           <span>Прозрачность</span>
           <output id="opacityOut" aria-live="polite">100%</output>
         </label>
-        <input type="range" id="opacitySlider" min="1" max="100" value="100" aria-label="Прозрачность кисти">
+        <input type="range" id="opacitySlider" min="1" max="100" value="100">
       </div>
       
       <div class="control">
-        <label class="control-label" for="colorPicker">
-          <span>Цвет</span>
+        <label class="control-label" for="hardnessSlider">
+          <span>Жесткость</span>
+          <output id="hardnessOut" aria-live="polite">100%</output>
         </label>
-        <input type="color" id="colorPicker" value="#007aff" aria-label="Выбор цвета">
+        <input type="range" id="hardnessSlider" min="1" max="100" value="100">
+      </div>
+      
+      <div class="control">
+        <label class="control-label" for="spacingSlider">
+          <span>Интервал</span>
+          <output id="spacingOut" aria-live="polite">25%</output>
+        </label>
+        <input type="range" id="spacingSlider" min="1" max="100" value="25">
+      </div>
+    </section>
+
+    <!-- Цвета -->
+    <section class="control-group" aria-labelledby="color-section">
+      <h3 id="color-section" class="control-group-title">ЦВЕТА</h3>
+      
+      <div class="control">
+        <label class="control-label" for="colorPicker">
+          <span>Основной цвет</span>
+        </label>
+        <input type="color" id="colorPicker" value="#007aff">
+      </div>
+      
+      <div class="control">
+        <label class="control-label" for="secondaryColorPicker">
+          <span>Вторичный цвет</span>
+        </label>
+        <input type="color" id="secondaryColorPicker" value="#ff3b30">
+      </div>
+      
+      <div class="color-presets">
+        <div class="preset-grid">
+          <div class="color-preset" style="background:#ff3b30" data-color="#ff3b30"></div>
+          <div class="color-preset" style="background:#ff9500" data-color="#ff9500"></div>
+          <div class="color-preset" style="background:#ffcc00" data-color="#ffcc00"></div>
+          <div class="color-preset" style="background:#4cd964" data-color="#4cd964"></div>
+          <div class="color-preset" style="background:#5ac8fa" data-color="#5ac8fa"></div>
+          <div class="color-preset" style="background:#007aff" data-color="#007aff"></div>
+          <div class="color-preset" style="background:#5856d6" data-color="#5856d6"></div>
+          <div class="color-preset" style="background:#ff2d55" data-color="#ff2d55"></div>
+          <div class="color-preset" style="background:#8e8e93" data-color="#8e8e93"></div>
+          <div class="color-preset" style="background:#000000" data-color="#000000"></div>
+          <div class="color-preset" style="background:#ffffff" data-color="#ffffff"></div>
+          <div class="color-preset" style="background:#f2f2f7" data-color="#f2f2f7"></div>
+        </div>
       </div>
     </section>
 
     <!-- Инструменты -->
     <section class="control-group" aria-labelledby="tools-section">
       <h3 id="tools-section" class="control-group-title">ИНСТРУМЕНТЫ</h3>
-      <select id="toolSelect" aria-describedby="tools-section">
-        <option value="brush">Кисть</option>
-        <option value="eraser">Ластик</option>
-        <option value="smudge">Смазка</option>
-        <option value="blur">Размытие</option>
-      </select>
+      
+      <div class="tools-grid">
+        <button class="tool-btn active" data-tool="brush" title="Кисть">
+          <span class="tool-icon">🖌️</span>
+          <span class="tool-name">Кисть</span>
+        </button>
+        <button class="tool-btn" data-tool="eraser" title="Ластик">
+          <span class="tool-icon">🧽</span>
+          <span class="tool-name">Ластик</span>
+        </button>
+        <button class="tool-btn" data-tool="smudge" title="Смазка">
+          <span class="tool-icon">👆</span>
+          <span class="tool-name">Смазка</span>
+        </button>
+        <button class="tool-btn" data-tool="blur" title="Размытие">
+          <span class="tool-icon">🌀</span>
+          <span class="tool-name">Размытие</span>
+        </button>
+        <button class="tool-btn" data-tool="fill" title="Заливка">
+          <span class="tool-icon">🪣</span>
+          <span class="tool-name">Заливка</span>
+        </button>
+        <button class="tool-btn" data-tool="gradient" title="Градиент">
+          <span class="tool-icon">🌈</span>
+          <span class="tool-name">Градиент</span>
+        </button>
+      </div>
+      
+      <div class="advanced-tools">
+        <select id="advancedToolSelect">
+          <option value="">Дополнительные инструменты...</option>
+          <option value="lighten">Осветление</option>
+          <option value="darken">Затемнение</option>
+          <option value="saturate">Насыщенность</option>
+          <option value="desaturate">Обесцвечивание</option>
+          <option value="sharpen">Резкость</option>
+          <option value="clone">Клонирование</option>
+          <option value="heal">Восстановление</option>
+        </select>
+      </div>
+    </section>
+
+    <!-- Фигуры и штампы -->
+    <section class="control-group" aria-labelledby="shapes-section">
+      <h3 id="shapes-section" class="control-group-title">ФИГУРЫ & ШТАМПЫ</h3>
+      
+      <div class="control">
+        <label class="control-label" for="shapeCategory">
+          <span>Категория</span>
+        </label>
+        <select id="shapeCategory">
+          <option value="basic">Базовые фигуры</option>
+          <option value="anime">Аниме элементы</option>
+          <option value="clothing">Одежда</option>
+          <option value="nature">Природа</option>
+          <option value="architecture">Архитектура</option>
+          <option value="effects">Эффекты</option>
+        </select>
+      </div>
+      
+      <div class="shapes-grid">
+        <button class="shape-btn" data-shape="circle" title="Круг">●</button>
+        <button class="shape-btn" data-shape="square" title="Квадрат">■</button>
+        <button class="shape-btn" data-shape="triangle" title="Треугольник">▲</button>
+        <button class="shape-btn" data-shape="star" title="Звезда">★</button>
+        <button class="shape-btn" data-shape="heart" title="Сердце">♥</button>
+        <button class="shape-btn" data-shape="line" title="Линия">─</button>
+      </div>
+      
+      <div class="control">
+        <label class="control-label" for="stampSelect">
+          <span>Штампы</span>
+        </label>
+        <select id="stampSelect">
+          <option value="">Выберите штамп...</option>
+          <option value="anime_eye">Аниме глаз</option>
+          <option value="anime_hair">Аниме волосы</option>
+          <option value="leaf">Лист</option>
+          <option value="flower">Цветок</option>
+          <option value="cloud">Облако</option>
+          <option value="sparkle">Блеск</option>
+        </select>
+      </div>
     </section>
 
     <!-- Слои -->
     <section class="control-group" aria-labelledby="layers-section">
       <h3 id="layers-section" class="control-group-title">СЛОИ</h3>
+      
+      <div class="layers-list" id="layersList">
+        <!-- Слои будут добавляться динамически -->
+      </div>
+      
       <div class="button-group">
-        <button id="newLayerBtn" aria-label="Добавить новый слой">+ Новый слой</button>
-        <button id="deleteLayerBtn" aria-label="Удалить текущий слой">- Удалить</button>
+        <button id="newLayerBtn" title="Добавить слой">+ Слой</button>
+        <button id="deleteLayerBtn" title="Удалить слой">- Удалить</button>
+        <button id="mergeLayersBtn" title="Объединить слои">⤵ Объединить</button>
       </div>
       
-      <div class="control">
-        <label class="control-label" for="layerSelect">
-          <span>Активный слой</span>
-        </label>
-        <select id="layerSelect" aria-describedby="layers-section"></select>
-      </div>
-      
-      <div class="control">
-        <label class="control-label" for="layerOpacity">
-          <span>Прозрачность</span>
-          <output id="layerOpacityOut" aria-live="polite">100%</output>
-        </label>
-        <input type="range" id="layerOpacity" min="0" max="100" value="100" aria-label="Прозрачность слоя">
+      <div class="layer-controls">
+        <div class="control">
+          <label class="control-label" for="layerOpacity">
+            <span>Прозрачность</span>
+            <output id="layerOpacityOut">100%</output>
+          </label>
+          <input type="range" id="layerOpacity" min="0" max="100" value="100">
+        </div>
+        
+        <div class="control">
+          <label class="control-label" for="blendMode">
+            <span>Режим смешивания</span>
+          </label>
+          <select id="blendMode">
+            <option value="normal">Нормальный</option>
+            <option value="multiply">Умножение</option>
+            <option value="screen">Экран</option>
+            <option value="overlay">Перекрытие</option>
+            <option value="darken">Замена темным</option>
+            <option value="lighten">Замена светлым</option>
+          </select>
+        </div>
       </div>
     </section>
 
     <!-- Действия -->
     <section class="control-group" aria-labelledby="actions-section">
       <h3 id="actions-section" class="control-group-title">ДЕЙСТВИЯ</h3>
+      
       <div class="button-group">
-        <button id="undoBtn" aria-label="Отменить последнее действие">↶ Отмена</button>
-        <button id="redoBtn" aria-label="Повторить отмененное действие">↷ Повтор</button>
+        <button id="undoBtn" title="Отменить (Ctrl+Z)">↶ Отмена</button>
+        <button id="redoBtn" title="Повторить (Ctrl+Y)">↷ Повтор</button>
       </div>
-      <button id="clearBtn" class="secondary" aria-label="Очистить текущий слой">🗑 Очистить слой</button>
-      <button id="saveBtn" aria-label="Сохранить рисунок">💾 Сохранить PNG</button>
+      
+      <div class="button-group">
+        <button id="clearBtn" class="secondary" title="Очистить слой">🗑 Очистить</button>
+        <button id="saveBtn" title="Сохранить изображение">💾 Сохранить</button>
+      </div>
+      
+      <div class="export-options">
+        <select id="exportFormat">
+          <option value="png">PNG</option>
+          <option value="jpg">JPEG</option>
+          <option value="webp">WebP</option>
+        </select>
+        <button id="exportBtn" class="secondary">Экспорт</button>
+      </div>
+    </section>
+
+    <!-- Настройки -->
+    <section class="control-group" aria-labelledby="settings-section">
+      <h3 id="settings-section" class="control-group-title">НАСТРОЙКИ</h3>
+      
+      <div class="control">
+        <label class="control-label" for="pressureSensitivity">
+          <span>Чувствительность к нажиму</span>
+          <output id="pressureOut">100%</output>
+        </label>
+        <input type="range" id="pressureSensitivity" min="0" max="200" value="100">
+      </div>
+      
+      <div class="control">
+        <label class="control-label" for="smoothingSlider">
+          <span>Сглаживание</span>
+          <output id="smoothingOut">50%</output>
+        </label>
+        <input type="range" id="smoothingSlider" min="0" max="100" value="50">
+      </div>
+      
+      <div class="switch-group">
+        <label class="switch">
+          <input type="checkbox" id="gridToggle" checked>
+          <span class="slider"></span>
+          <span class="switch-label">Сетка</span>
+        </label>
+        
+        <label class="switch">
+          <input type="checkbox" id="pressureToggle" checked>
+          <span class="slider"></span>
+          <span class="switch-label">Чувствительность к нажиму</span>
+        </label>
+        
+        <label class="switch">
+          <input type="checkbox" id="darkModeToggle" checked>
+          <span class="slider"></span>
+          <span class="switch-label">Темная тема</span>
+        </label>
+      </div>
     </section>
   </aside>
 
   <main class="main-content" aria-label="Область рисования">
-    <div class="canvas-container">
+    <div class="canvas-container" id="canvasContainer">
       <canvas id="canvas" aria-label="Холст для рисования" role="img">
         <p>Ваш браузер не поддерживает элемент canvas. Пожалуйста, обновите браузер для использования приложения.</p>
       </canvas>
-      <div class="canvas-overlay" id="canvasInfo" aria-live="polite">Готов к рисованию</div>
+      
+      <div class="canvas-overlay" id="canvasInfo" aria-live="polite">
+        <div class="canvas-stats">
+          <span id="brushInfo">Круглая | 20px</span>
+          <span id="coordinates">X: 0, Y: 0</span>
+        </div>
+      </div>
+      
+      <div class="canvas-grid" id="canvasGrid"></div>
     </div>
   </main>
+
+  <!-- Модальное окно для мобильного меню -->
+  <div class="modal" id="mobileModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Быстрый доступ</h3>
+        <button class="modal-close" id="mobileModalClose">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="mobile-tools-grid">
+          <button class="mobile-tool-btn" data-tool="brush">🖌️ Кисть</button>
+          <button class="mobile-tool-btn" data-tool="eraser">🧽 Ластик</button>
+          <button class="mobile-tool-btn" data-tool="fill">🪣 Заливка</button>
+          <button class="mobile-tool-btn" data-tool="shape">● Фигуры</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <script src="js/brushes.js"></script>
   <script src="js/tools.js"></script>
   <script src="js/layers.js"></script>
   <script src="js/figures.js"></script>
+  <script src="js/textures.js"></script>
+  <script src="js/anime.js"></script>
+  <script src="js/3d.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
