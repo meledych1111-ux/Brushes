@@ -52,17 +52,21 @@ window.core = (() => {
     const p = getPos(e);
     lastX = p.x;
     lastY = p.y;
-    window.drawBrush(p.x, p.y);
+    window.drawBrush(p.x, p.y, e.pressure || 1);
     saveState();
   });
   canvas.addEventListener('pointermove', e => {
     if (!painting) return;
     const p = getPos(e);
-    window.drawLine(lastX, lastY, p.x, p.y);
+    window.drawBrush(p.x, p.y, e.pressure || 1);
     lastX = p.x;
     lastY = p.y;
   });
-  window.addEventListener('pointerup', () => painting = false);
+  window.addEventListener('pointerup', () => {
+    painting = false;
+    window.lastFigure = null;
+    window.lastRuler = null;
+  });
   canvas.addEventListener('pointerleave', () => painting = false);
 
   /* --- public --- */
