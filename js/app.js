@@ -5,6 +5,9 @@ window.core = (() => {
   let painting = false;
   let lastX = 0, lastY = 0;
 
+  /* --- отключаем поведение Safari «только стилус» --- */
+  canvas.style.touchAction = 'none';
+
   /* --- hi-dpi --- */
   function resize() {
     const dpr = window.devicePixelRatio || 1;
@@ -42,7 +45,7 @@ window.core = (() => {
     }
   };
 
-  /* --- pointer --- */
+  /* --- pointer-events c passive: false --- */
   function getPos(e) {
     const rect = canvas.getBoundingClientRect();
     return { x: e.clientX - rect.left, y: e.clientY - rect.top };
@@ -54,14 +57,16 @@ window.core = (() => {
     lastY = p.y;
     window.drawBrush(p.x, p.y, e.pressure || 1);
     saveState();
-  });
+  }, { passive: false });
+
   canvas.addEventListener('pointermove', e => {
     if (!painting) return;
     const p = getPos(e);
     window.drawBrush(p.x, p.y, e.pressure || 1);
     lastX = p.x;
     lastY = p.y;
-  });
+  }, { passive: false });
+
   window.addEventListener('pointerup', () => {
     painting = false;
     window.lastFigure = null;
