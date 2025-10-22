@@ -1,115 +1,202 @@
+// js/layers.js - система слоев
 (() => {
-  const layers = [];
-  let activeIndex = 0;
+    const layers = [];
+    let activeIndex = 0;
 
-  function createLayer(name = `Layer ${layers.length + 1}`) {
-    const c = document.createElement('canvas');
-    const ctx = c.getContext('2d');
-    resizeLayer(c);
-    const layer = { name, canvas: c, ctx, opacity: 1 };
-    layers.push(layer);
-    activeIndex = layers.length - 1;
-    composeLayers();
-    updateLayerUI();
-    return layer;
-  }
-
-  function resizeLayer(canvas) {
-    const dpr = window.App ? window.App.getDpr() : (window.devicePixelRatio || 1);
-    const w = window.innerWidth;
-    const h = window.innerHeight - document.getElementById('toolbar').offsetHeight;
-    canvas.width = Math.max(1, Math.floor(w * dpr));
-    canvas.height = Math.max(1, Math.floor(h * dpr));
-    canvas.style.width = w + 'px';
-    canvas.style.height = h + 'px';
-    const ctx = canvas.getContext('2d');
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.scale(dpr, dpr);
-  }
-
-  function resizeAll() {
-    layers.forEach(l => resizeLayer(l.canvas));
-    composeLayers();
-  }
-
-  function setOpacity(index, value) {
-    if (layers[index]) {
-      layers[index].opacity = value;
-      composeLayers();
+    // Создание нового слоя
+    function createLayer(name = `Слой ${layers.length + 1}`) {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        resizeLayer(canvas);
+        
+        const layer = {
+            name,
+            canvas,
+            ctx,
+            opacity: 1,
+            visible: true
+        };
+        
+        layers.push(layer);
+        activeIndex = layers.length - 1;
+        composeLayers();
+        updateLayerUI();
+        
+        return layer;
     }
-  }
 
-  function setActive(index) {
-    if (index >= 0 && index < layers.length) activeIndex = index;
-  }
+    // Изменение размера слоя
+    function resizeLayer(canvas) {
+        const dpr = window.App ? window.App.getDpr() : (window.devicePixelRatio || 1);
+        const toolbar = document.getElementById('toolbar');
+        const toolbarHeight = toolbar ? toolbar.offsetHeight : 0;
+        const w = window.innerWidth;
+        const h = Math.max(100, window.innerHeight - toolbarHeight);
+        
+        canvas.width = Math.max(1, Math.floor(w * dpr));
+        canvas.height = Math.max(1, Math.floor(h * dpr));
+        canvas.style.width = w + 'px';
+        canvas.style.height = h + 'px';
+        
+        const ctx = canvas.getContext('2d');
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.scale(dpr, dpr);
+    }
 
-  function getActiveCtx() {
-    return layers[activeIndex]?.ctx || window.App.ctx;
-  }
+    // Изменение размера всех слоев
+    function resizeAll() {
+        layers.forEach(layer => resizeLayer(layer.canvas));
+        composeLayers();
+    }
 
-  function composeLayers() {
-    const baseCtx = window.App.ctx;
-    const baseCanvas = window.App.canvas;
-    const w = baseCanvas.width / (window.App.getDpr ? window.App.getDpr() : 1);
-    const h = baseCanvas.height / (window.App.getDpr ? window.App.getDpr() : 1);
-    baseCtx.clearRect(0, 0, w, h);
-    layers.forEach(l => {
-      baseCtx.save();
-      baseCtx.globalAlpha = l.opacity;
-      baseCtx.drawImage(l.canvas, 0, 0, w, h);
-      baseCtx.restore();
-    });
-  }
+    // Установка прозрачности слоя
+    function setOpacity(index, value) {
+        if (layers[index]) {
+            layers[index].opacity = value / 100;
+            composeLayers();
+        }
+    }
 
-  function updateLayerUI() {
-    const sel = document.getElementById('layerSelect');
-    if (!sel) return;
-    sel.innerHTML = '';
-    layers.forEach((l, i) => {
-      const opt = document.createElement('option');
-      opt.value = String(i);
-      opt.textContent = l.name;
-      if (i === activeIndex) opt.selected = true;
-      sel.appendChild(opt);
-    });
-  }
+    // Установка активного слоя
+    function setActive(index) {
+        if (index >= 0 && index < layers.length) {
+            activeIndex = index;
+            composeLayers();
+            updateLayerUI();
+        }
+    }
 
-  createLayer('Layer 1');
+    // Получение контекста активного слоя
+    function getActiveCtx() {
+        return layers[activeIndex]?.ctx || window.App.ctx;
+    }
 
-  window.Layers = {
-    createLayer,
-    setOpacity,
-    setActive,
-    getActiveCtx,
-    composeLayers,
-    resizeAll,
-    get layers() { return layers; },
-    get activeIndex() { return activeIndex; }
-  };
+    // Объединение слоев
+    function composeLayers() {
+        const baseCtx = window.App.ctx;
+        const baseCanvas = window.App.canvas;
+        const dpr = window.App ? window.App.getDpr() : 1;
+        const w = baseCanvas.width / dpr;
+        const h = baseCanvas.height / dpr;
+        
+        // Очищаем основной холст
+        baseCtx.clearRect(0, 0, w, h);
+        
+        // Отрисовываем все видимые слои
+        layers.forEach(layer => {
+            if (layer.visible && layer.opacity > 0) {
+                baseCtx.save();
+                baseCtx.globalAlpha = layer.opacity;
+                baseCtx.drawImage(layer.canvas, 0, 0, w, h);
+                baseCtx.restore();
+            }
+        });
+    }
 
-  window.addEventListener('resize', resizeAll);
+    // Обновление интерфейса слоев
+    function updateLayerUI() {
+        const layerSelect = document.getElementById('layerSelect');
+        const layerOpacity = document.getElementById('layerOpacity');
+        const layerOpacityOut = document.getElementById('layerOpacityOut');
+        
+        if (layerSelect) {
+            layerSelect.innerHTML = '';
+            layers.forEach((layer, index) => {
+                const option = document.createElement('option');
+                option.value = String(index);
+                option.textContent = `${layer.name} ${index === activeIndex ? '✓' : ''}`;
+                if (index === activeIndex) option.selected = true;
+                layerSelect.appendChild(option);
+            });
+        }
+        
+        if (layerOpacity && layerOpacityOut && layers[activeIndex]) {
+            layerOpacity.value = Math.round(layers[activeIndex].opacity * 100);
+            layerOpacityOut.textContent = layerOpacity.value + '%';
+        }
+    }
 
-  const newBtn = document.getElementById('newLayerBtn');
-  const layerSelect = document.getElementById('layerSelect');
-  const layerOpacity = document.getElementById('layerOpacity');
+    // Удаление слоя
+    function deleteLayer(index) {
+        if (layers.length <= 1) {
+            alert('Нельзя удалить последний слой');
+            return;
+        }
+        
+        layers.splice(index, 1);
+        if (activeIndex >= layers.length) {
+            activeIndex = layers.length - 1;
+        }
+        composeLayers();
+        updateLayerUI();
+    }
 
-  if (newBtn) {
-    newBtn.addEventListener('click', () => {
-      createLayer();
-      window.App.saveState();
-    });
-  }
-  if (layerSelect) {
-    layerSelect.addEventListener('change', (e) => {
-      const idx = parseInt(e.target.value, 10);
-      setActive(idx);
-    });
-  }
-  if (layerOpacity) {
-    layerOpacity.addEventListener('input', (e) => {
-      const val = parseFloat(e.target.value);
-      setOpacity(activeIndex, val);
-      window.App.saveState();
-    });
-  }
+    // Инициализация системы слоев
+    function initLayers() {
+        createLayer('Фон');
+        
+        // Обработчики событий
+        const newLayerBtn = document.getElementById('newLayerBtn');
+        const deleteLayerBtn = document.getElementById('deleteLayerBtn');
+        const layerSelect = document.getElementById('layerSelect');
+        const layerOpacity = document.getElementById('layerOpacity');
+        
+        if (newLayerBtn) {
+            newLayerBtn.addEventListener('click', () => {
+                createLayer();
+                if (window.App) window.App.saveState();
+            });
+        }
+        
+        if (deleteLayerBtn) {
+            deleteLayerBtn.addEventListener('click', () => {
+                deleteLayer(activeIndex);
+                if (window.App) window.App.saveState();
+            });
+        }
+        
+        if (layerSelect) {
+            layerSelect.addEventListener('change', (e) => {
+                const index = parseInt(e.target.value, 10);
+                setActive(index);
+            });
+        }
+        
+        if (layerOpacity) {
+            layerOpacity.addEventListener('input', (e) => {
+                const value = parseFloat(e.target.value);
+                setOpacity(activeIndex, value);
+                if (window.App) window.App.saveState();
+                
+                const layerOpacityOut = document.getElementById('layerOpacityOut');
+                if (layerOpacityOut) {
+                    layerOpacityOut.textContent = value + '%';
+                }
+            });
+        }
+    }
+
+    // Создаем первый слой при загрузке
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initLayers);
+    } else {
+        initLayers();
+    }
+
+    // Глобальный интерфейс
+    window.Layers = {
+        createLayer,
+        setOpacity,
+        setActive,
+        getActiveCtx,
+        composeLayers,
+        resizeAll,
+        deleteLayer,
+        get layers() { return layers; },
+        get activeIndex() { return activeIndex; },
+        set activeIndex(index) { setActive(index); }
+    };
+
+    window.addEventListener('resize', resizeAll);
 })();
