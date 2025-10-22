@@ -3,54 +3,105 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no"/>
-  <title>ArtFlow 250 + Layers</title>
+  <title>ArtFlow Pro - Цифровая живопись</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
   <aside class="panel" id="toolbar">
-    <h1>ArtFlow 250</h1>
+    <header class="panel-header">
+      <h1>🎨 ArtFlow Pro</h1>
+    </header>
 
-    <label>Кисть
-      <select id="brushSelect"></select>
-    </label>
-    <label>Размер
-      <input type="range" id="sizeSlider" min="1" max="120" value="20">
-      <output id="sizeOut">20</output>
-    </label>
-    <label>Цвет
-      <input type="color" id="colorPicker" value="#007aff">
-    </label>
+    <!-- Кисти -->
+    <section class="control-group">
+      <h3 class="control-group-title">КИСТИ</h3>
+      <div class="control">
+        <label class="control-label">
+          <span>Тип кисти</span>
+        </label>
+        <select id="brushSelect"></select>
+      </div>
+      
+      <div class="control">
+        <label class="control-label">
+          <span>Размер</span>
+          <output id="sizeOut">20</output>
+        </label>
+        <input type="range" id="sizeSlider" min="1" max="100" value="20">
+      </div>
+      
+      <div class="control">
+        <label class="control-label">
+          <span>Прозрачность</span>
+          <output id="opacityOut">100%</output>
+        </label>
+        <input type="range" id="opacitySlider" min="1" max="100" value="100">
+      </div>
+      
+      <div class="control">
+        <label class="control-label">
+          <span>Цвет</span>
+        </label>
+        <input type="color" id="colorPicker" value="#007aff">
+      </div>
+    </section>
+
+    <!-- Инструменты -->
+    <section class="control-group">
+      <h3 class="control-group-title">ИНСТРУМЕНТЫ</h3>
+      <select id="toolSelect">
+        <option value="brush">Кисть</option>
+        <option value="eraser">Ластик</option>
+        <option value="smudge">Смазка</option>
+        <option value="blur">Размытие</option>
+      </select>
+    </section>
 
     <!-- Слои -->
-    <h2>Слои</h2>
-    <div class="row">
-      <button id="newLayerBtn">+ Слой</button>
-    </div>
-    <label>Активный
-      <select id="layerSelect"></select>
-    </label>
-    <label>Прозрачность
-      <input type="range" id="layerOpacity" min="0" max="1" step="0.05" value="1">
-    </label>
+    <section class="control-group">
+      <h3 class="control-group-title">СЛОИ</h3>
+      <div class="button-group">
+        <button id="newLayerBtn">+ Новый слой</button>
+        <button id="deleteLayerBtn">- Удалить</button>
+      </div>
+      
+      <div class="control">
+        <label class="control-label">
+          <span>Активный слой</span>
+        </label>
+        <select id="layerSelect"></select>
+      </div>
+      
+      <div class="control">
+        <label class="control-label">
+          <span>Прозрачность</span>
+          <output id="layerOpacityOut">100%</output>
+        </label>
+        <input type="range" id="layerOpacity" min="0" max="100" value="100">
+      </div>
+    </section>
 
-    <!-- Ластик / размытие -->
-    <h2>Инструменты</h2>
-    <select id="toolSelect">
-      <option value="brush">Кисть</option>
-      <option value="eraser">Ластик</option>
-      <option value="smudge">Смазка</option>
-      <option value="blur">Размытие</option>
-    </select>
-
-    <button id="clearBtn">🗑 Очистить</button>
-    <button id="saveBtn">💾 Сохранить PNG</button>
+    <!-- Действия -->
+    <section class="control-group">
+      <h3 class="control-group-title">ДЕЙСТВИЯ</h3>
+      <div class="button-group">
+        <button id="undoBtn">↶ Отмена</button>
+        <button id="redoBtn">↷ Повтор</button>
+      </div>
+      <button id="clearBtn" class="secondary">🗑 Очистить слой</button>
+      <button id="saveBtn">💾 Сохранить PNG</button>
+    </section>
   </aside>
 
-  <canvas id="canvas"></canvas>
+  <main class="canvas-container">
+    <canvas id="canvas"></canvas>
+    <div class="canvas-overlay" id="canvasInfo">Готов к рисованию</div>
+  </main>
 
   <script src="js/brushes.js"></script>
-  <script src="js/layers.js"></script>
   <script src="js/tools.js"></script>
+  <script src="js/layers.js"></script>
+  <script src="js/figures.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
