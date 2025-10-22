@@ -1,620 +1,626 @@
-// js/app.js – финальная версия с исправленными кнопками и адаптивностью
+// js/app.js - ПОЛНОСТЬЮ ИСПРАВЛЕННАЯ ВЕРСИЯ
 (() => {
-  console.log('🔄 Starting ArtFlow Pro...');
+    console.log('🔄 Starting ArtFlow Pro...');
 
-  const canvas = document.getElementById('canvas');
-  if (!canvas) { console.error('❌ Canvas not found'); return; }
-  const ctx = canvas.getContext('2d');
-  if (!ctx) { console.error('❌ Context not available'); return; }
-
-  let painting = false;
-  let lastX = 0, lastY = 0;
-  let currentTool = 'brush';
-  let currentBrush = 'round';
-  let currentColor = '#007aff';
-  let brushSize = 20;
-  let brushOpacity = 1;
-  let history = [];
-  let historyStep = 0;
-  let isMobile = window.innerWidth <= 768;
-
-  function init() {
-    console.log('🎨 Initializing ArtFlow Pro...');
-    
-    // Инициализация модулей если они не загружены
-    initializeModules();
-    setupCanvas();
-    setupUI();
-    setupEventListeners();
-    loadInitialState();
-    
-    console.log('✅ ArtFlow Pro initialized successfully');
-  }
-
-  function initializeModules() {
-    // Инициализация всех модулей если они не загружены
-    if (!window.Layers) {
-      window.Layers = {
-        getActiveCtx: () => ctx,
-        composeLayers: () => {},
-        resizeAll: () => {},
-        createLayer: () => {
-          console.log('📝 Creating new layer...');
-          alert('Система слоев загружена! Создан новый слой.');
-        },
-        getActiveLayer: () => ({ ctx: ctx })
-      };
+    // Основные элементы
+    const canvas = document.getElementById('canvas');
+    if (!canvas) {
+        console.error('❌ Canvas element not found');
+        return;
     }
-    
-    if (!window.BRUSHES) {
-      console.warn('⚠️ BRUSHES module not found, using fallback');
-      window.BRUSHES = {
-        round: (ctx, x, y, size, color, opacity) => {
-          ctx.save();
-          ctx.globalAlpha = opacity;
-          ctx.fillStyle = color;
-          ctx.beginPath();
-          ctx.arc(x, y, size, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.restore();
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+        console.error('❌ Canvas context not available');
+        return;
+    }
+
+    // Состояние приложения
+    let painting = false;
+    let lastX = 0, lastY = 0;
+    let currentTool = 'brush';
+    let currentBrush = 'Круглая';
+    let history = [];
+    let historyStep = 0;
+
+    /* 1. Инициализация приложения */
+    function init() {
+        console.log('🎨 Initializing ArtFlow Pro...');
+        
+        // Временная замена для Layers если не загружены
+        if (!window.Layers) {
+            window.Layers = {
+                getActiveCtx: () => ctx,
+                composeLayers: () => {},
+                resizeAll: () => {}
+            };
         }
-      };
-    }
-    
-    if (!window.FIGURES) {
-      console.warn('⚠️ FIGURES module not found, using fallback');
-      window.FIGURES = {
-        circle: (ctx, x, y, size, color, opacity) => {
-          ctx.save();
-          ctx.globalAlpha = opacity;
-          ctx.strokeStyle = color;
-          ctx.lineWidth = 2;
-          ctx.beginPath();
-          ctx.arc(x, y, size, 0, Math.PI * 2);
-          ctx.stroke();
-          ctx.restore();
-        }
-      };
-    }
-    
-    if (!window.Tools) {
-      console.warn('⚠️ Tools module not found, using fallback');
-      window.Tools = {};
-    }
-  }
-
-  function setupCanvas() {
-    const container = document.querySelector('.canvas-container');
-    if (!container) {
-      console.error('❌ Canvas container not found');
-      return;
-    }
-    
-    const width = container.clientWidth;
-    const height = container.clientHeight;
-    
-    canvas.width = width;
-    canvas.height = height;
-    canvas.style.width = width + 'px';
-    canvas.style.height = height + 'px';
-    
-    // Очищаем и заполняем белым фоном
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, width, height);
-    
-    // Обновляем слои если они есть
-    if (window.Layers && window.Layers.resizeAll) {
-      window.Layers.resizeAll();
-    }
-    
-    saveState();
-    console.log(`📐 Canvas set to ${width}x${height}`);
-  }
-
-  function setupEventListeners() {
-    // Основные события canvas
-    canvas.addEventListener('mousedown', handleMouseDown);
-    canvas.addEventListener('mousemove', handleMouseMove);
-    canvas.addEventListener('mouseup', handleMouseUp);
-    canvas.addEventListener('mouseleave', handleMouseUp);
-
-    canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
-    canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
-    canvas.addEventListener('touchend', handleTouchEnd);
-
-    // Адаптивность
-    window.addEventListener('resize', () => {
-      setTimeout(() => {
+        
         setupCanvas();
-        updateResponsiveLayout();
-      }, 100);
-    });
-
-    // Обновление координат
-    canvas.addEventListener('mousemove', updateCoordinates);
-    canvas.addEventListener('touchmove', updateCoordinates);
-  }
-
-  function handleMouseDown(e) {
-    e.preventDefault();
-    painting = true;
-    const pos = getCanvasPosition(e);
-    lastX = pos.x; lastY = pos.y;
-    
-    // Для инструментов, которым не нужна линия (заливка и т.д.)
-    if (currentTool === 'fill' || currentTool === 'gradient') {
-      drawBrush(pos.x, pos.y, null, null, 1);
-      painting = false;
-      saveState();
-    } else {
-      drawBrush(pos.x, pos.y, null, null, e.pressure > 0 ? e.pressure : 1);
-    }
-  }
-
-  function handleMouseMove(e) {
-    if (!painting) return;
-    e.preventDefault();
-    const pos = getCanvasPosition(e);
-    let pressure = e.pressure;
-    if (!pressure || pressure <= 0) pressure = 1;
-    drawLine(lastX, lastY, pos.x, pos.y, pressure);
-    lastX = pos.x; lastY = pos.y;
-  }
-
-  function handleMouseUp() {
-    if (painting) { 
-      painting = false; 
-      saveState(); 
-    }
-  }
-
-  function handleTouchStart(e) {
-    e.preventDefault();
-    painting = true;
-    const touch = e.touches[0];
-    const pos = getCanvasPosition(touch);
-    lastX = pos.x; lastY = pos.y;
-    
-    if (currentTool === 'fill' || currentTool === 'gradient') {
-      drawBrush(pos.x, pos.y, null, null, 1);
-      painting = false;
-      saveState();
-    } else {
-      drawBrush(pos.x, pos.y, null, null, 1);
-    }
-  }
-
-  function handleTouchMove(e) {
-    if (!painting) return;
-    e.preventDefault();
-    const touch = e.touches[0];
-    const pos = getCanvasPosition(touch);
-    drawLine(lastX, lastY, pos.x, pos.y, 1);
-    lastX = pos.x; lastY = pos.y;
-  }
-
-  function handleTouchEnd() {
-    if (painting) { 
-      painting = false; 
-      saveState(); 
-    }
-  }
-
-  // === РИСОВАНИЕ ===
-  function drawLine(x1, y1, x2, y2, pressure = 1) {
-    const dx = x2 - x1, dy = y2 - y1;
-    const dist = Math.sqrt(dx * dx + dy * dy);
-    const steps = Math.max(1, Math.floor(dist / 2));
-    
-    for (let i = 0; i <= steps; i++) {
-      const t = i / steps;
-      const x = x1 + dx * t, y = y1 + dy * t;
-      drawBrush(x, y, null, null, pressure);
-    }
-  }
-
-  function drawBrush(x, y, x2 = null, y2 = null, pressure = 1) {
-    const size = getBrushSize() * pressure;
-    const opacity = getBrushOpacity() * pressure;
-    const color = getCurrentColor();
-    const ctxActive = (window.Layers && window.Layers.getActiveCtx()) || ctx;
-
-    try {
-      if (currentTool === 'brush') {
-        if (window.BRUSHES && window.BRUSHES[currentBrush]) {
-          window.BRUSHES[currentBrush](ctxActive, x, y, size, color, opacity);
-        } else {
-          drawFallbackBrush(ctxActive, x, y, size, color, opacity);
-        }
-      }
-      else if (currentTool === 'eraser') {
-        if (window.Tools && window.Tools.eraser) {
-          window.Tools.eraser(ctxActive, x, y, size, color, opacity);
-        } else {
-          drawEraser(ctxActive, x, y, size, opacity);
-        }
-      }
-      else if (currentTool === 'shape' && window.currentShape) {
-        if (window.FIGURES && window.FIGURES[window.currentShape]) {
-          window.FIGURES[window.currentShape](ctxActive, x, y, size, color, opacity);
-        }
-      }
-      else if (window.Tools && window.Tools[currentTool]) {
-        if (x2 !== null && y2 !== null) {
-          window.Tools[currentTool](ctxActive, x, y, x2, y2, color, opacity);
-        } else {
-          window.Tools[currentTool](ctxActive, x, y, size, color, opacity);
-        }
-      }
-      else {
-        // Fallback для неизвестных инструментов
-        drawFallbackBrush(ctxActive, x, y, size, color, opacity);
-      }
-    } catch (err) {
-      console.error('❌ Draw error:', err);
-      drawFallbackBrush(ctxActive, x, y, size, color, opacity);
-    }
-  }
-
-  function drawFallbackBrush(ctxActive, x, y, r, color, op) {
-    ctxActive.save(); 
-    ctxActive.globalAlpha = op; 
-    ctxActive.fillStyle = color;
-    ctxActive.beginPath(); 
-    ctxActive.arc(x, y, r, 0, Math.PI * 2); 
-    ctxActive.fill(); 
-    ctxActive.restore();
-  }
-  
-  function drawEraser(ctxActive, x, y, r, op) {
-    ctxActive.save(); 
-    ctxActive.globalCompositeOperation = 'destination-out';
-    ctxActive.globalAlpha = op; 
-    ctxActive.beginPath(); 
-    ctxActive.arc(x, y, r, 0, Math.PI * 2); 
-    ctxActive.fill(); 
-    ctxActive.restore();
-  }
-
-  // === ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ===
-  function getCanvasPosition(e) {
-    const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
-    
-    const clientX = e.clientX || (e.touches && e.touches[0].clientX);
-    const clientY = e.clientY || (e.touches && e.touches[0].clientY);
-    
-    return {
-      x: (clientX - rect.left) * scaleX,
-      y: (clientY - rect.top) * scaleY
-    };
-  }
-  
-  function getCurrentColor() { 
-    const el = document.getElementById('colorPicker') || document.getElementById('quickColor');
-    return el ? el.value : currentColor; 
-  }
-  
-  function getBrushSize() { 
-    const el = document.getElementById('sizeSlider');
-    return el ? parseInt(el.value) : brushSize; 
-  }
-  
-  function getBrushOpacity() { 
-    const el = document.getElementById('opacitySlider');
-    return el ? parseInt(el.value) / 100 : brushOpacity; 
-  }
-
-  function updateCoordinates(e) {
-    const coordsEl = document.getElementById('coordinates');
-    if (!coordsEl) return;
-    
-    const pos = getCanvasPosition(e);
-    coordsEl.textContent = `X: ${Math.round(pos.x)}, Y: ${Math.round(pos.y)}`;
-  }
-
-  // === ИСТОРИЯ ===
-  function saveState() {
-    history.length = historyStep;
-    history.push(canvas.toDataURL());
-    if (history.length > 30) history.shift();
-    historyStep = history.length;
-    updateUndoRedoButtons();
-  }
-  
-  function undo() { 
-    if (historyStep > 1) { 
-      historyStep--; 
-      restoreState(); 
-      updateUndoRedoButtons();
-    } 
-  }
-  
-  function redo() { 
-    if (historyStep < history.length) { 
-      historyStep++; 
-      restoreState(); 
-      updateUndoRedoButtons();
-    } 
-  }
-  
-  function restoreState() {
-    if (historyStep > 0 && history[historyStep - 1]) {
-      const img = new Image();
-      img.onload = () => { 
-        ctx.clearRect(0, 0, canvas.width, canvas.height); 
-        ctx.drawImage(img, 0, 0); 
-      };
-      img.src = history[historyStep - 1];
-    }
-  }
-  
-  function updateUndoRedoButtons() {
-    const undoBtn = document.getElementById('undoBtn');
-    const redoBtn = document.getElementById('redoBtn');
-    
-    if (undoBtn) {
-      undoBtn.disabled = historyStep <= 1;
-      undoBtn.style.opacity = historyStep <= 1 ? '0.5' : '1';
-    }
-    
-    if (redoBtn) {
-      redoBtn.disabled = historyStep >= history.length;
-      redoBtn.style.opacity = historyStep >= history.length ? '0.5' : '1';
-    }
-  }
-
-  // === UI УПРАВЛЕНИЕ ===
-  function setupUI() {
-    setupToolButtons();
-    setupBrushControls();
-    setupActionButtons();
-    setupMobileControls();
-    updateResponsiveLayout();
-    
-    console.log('✅ UI setup complete');
-  }
-
-  function setupToolButtons() {
-    // Активация инструментов
-    const toolButtons = document.querySelectorAll('.tool-btn, .mobile-tool-btn');
-    toolButtons.forEach(btn => {
-      btn.addEventListener('click', function() {
-        // Убираем активный класс у всех кнопок
-        toolButtons.forEach(b => b.classList.remove('active'));
-        // Добавляем активный класс текущей кнопке
-        this.classList.add('active');
-        // Устанавливаем текущий инструмент
-        currentTool = this.dataset.tool || 'brush';
+        setupUI();
+        setupEventListeners();
         
-        // Обновляем информацию о кисти
-        updateBrushInfo();
-        console.log(`🛠️ Tool changed to: ${currentTool}`);
-      });
-    });
-
-    // Активация кистей
-    const brushSelect = document.getElementById('brushSelect');
-    if (brushSelect) {
-      brushSelect.addEventListener('change', function() {
-        currentBrush = this.value;
-        updateBrushInfo();
-        console.log(`🖌️ Brush changed to: ${currentBrush}`);
-      });
+        console.log('✅ ArtFlow Pro initialized successfully');
     }
 
-    // Активация фигур
-    const shapeButtons = document.querySelectorAll('.shape-btn');
-    shapeButtons.forEach(btn => {
-      btn.addEventListener('click', function() {
-        currentTool = 'shape';
-        window.currentShape = this.dataset.shape;
-        console.log(`🔷 Shape changed to: ${window.currentShape}`);
-      });
-    });
-  }
-
-  function setupBrushControls() {
-    // Размер кисти
-    const sizeSlider = document.getElementById('sizeSlider');
-    const sizeOut = document.getElementById('sizeOut');
-    if (sizeSlider && sizeOut) {
-      sizeSlider.addEventListener('input', function() {
-        brushSize = parseInt(this.value);
-        sizeOut.textContent = brushSize;
-        updateBrushInfo();
-      });
-    }
-
-    // Прозрачность
-    const opacitySlider = document.getElementById('opacitySlider');
-    const opacityOut = document.getElementById('opacityOut');
-    if (opacitySlider && opacityOut) {
-      opacitySlider.addEventListener('input', function() {
-        brushOpacity = parseInt(this.value) / 100;
-        opacityOut.textContent = this.value + '%';
-      });
-    }
-
-    // Цвет
-    const colorPickers = document.querySelectorAll('input[type="color"]');
-    colorPickers.forEach(picker => {
-      picker.addEventListener('input', function() {
-        currentColor = this.value;
-        updateBrushInfo();
-      });
-    });
-
-    // Пресеты цветов
-    const colorPresets = document.querySelectorAll('.color-preset');
-    colorPresets.forEach(preset => {
-      preset.addEventListener('click', function() {
-        const color = this.dataset.color;
-        currentColor = color;
+    /* 2. Настройка Canvas */
+    function setupCanvas() {
+        console.log('📐 Setting up canvas...');
         
-        // Обновляем все color pickers
-        colorPickers.forEach(picker => {
-          picker.value = color;
+        // Простые фиксированные размеры
+        const container = document.querySelector('.canvas-container');
+        let width = 800;
+        let height = 600;
+        
+        if (container) {
+            const rect = container.getBoundingClientRect();
+            if (rect.width > 100 && rect.height > 100) {
+                width = rect.width;
+                height = rect.height;
+            }
+        }
+        
+        console.log('📦 Canvas size:', width + 'x' + height);
+        
+        canvas.width = width;
+        canvas.height = height;
+        canvas.style.width = width + 'px';
+        canvas.style.height = height + 'px';
+        canvas.style.background = '#ffffff';
+        canvas.style.border = '1px solid #30363d';
+        canvas.style.display = 'block';
+        canvas.style.cursor = 'crosshair';
+
+        // Очищаем и заливаем белым
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Сохраняем начальное состояние
+        saveState();
+        
+        console.log('✅ Canvas setup completed');
+    }
+
+    /* 3. Обработчики событий */
+    function setupEventListeners() {
+        console.log('🎮 Setting up event listeners...');
+        
+        // Mouse events
+        canvas.addEventListener('mousedown', handleMouseDown);
+        canvas.addEventListener('mousemove', handleMouseMove);
+        canvas.addEventListener('mouseup', handleMouseUp);
+        canvas.addEventListener('mouseleave', handleMouseUp);
+        
+        // Touch events для мобильных
+        canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+        canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+        canvas.addEventListener('touchend', handleTouchEnd);
+        
+        // Resize
+        window.addEventListener('resize', handleResize);
+        
+        console.log('✅ Event listeners setup completed');
+    }
+
+    function handleMouseDown(e) {
+        e.preventDefault();
+        painting = true;
+        
+        const pos = getCanvasPosition(e);
+        lastX = pos.x;
+        lastY = pos.y;
+        
+        // Для инструментов, которым нужны начальные координаты
+        if (currentTool === 'gradient' || currentTool === 'lineTool') {
+            // Сохраняем начальную точку, но не рисуем сразу
+        } else {
+            drawBrush(pos.x, pos.y);
+        }
+    }
+
+    function handleMouseMove(e) {
+        if (!painting) return;
+        e.preventDefault();
+        
+        const pos = getCanvasPosition(e);
+        
+        if (currentTool === 'gradient' || currentTool === 'lineTool') {
+            // Для этих инструментов рисуем линию от начальной точки
+            drawLine(lastX, lastY, pos.x, pos.y);
+        } else {
+            drawLine(lastX, lastY, pos.x, pos.y);
+            lastX = pos.x;
+            lastY = pos.y;
+        }
+    }
+
+    function handleMouseUp() {
+        if (painting) {
+            painting = false;
+            saveState();
+        }
+    }
+
+    function handleTouchStart(e) {
+        e.preventDefault();
+        painting = true;
+        
+        const touch = e.touches[0];
+        const pos = getCanvasPosition(touch);
+        lastX = pos.x;
+        lastY = pos.y;
+        
+        drawBrush(pos.x, pos.y);
+    }
+
+    function handleTouchMove(e) {
+        if (!painting) return;
+        e.preventDefault();
+        
+        const touch = e.touches[0];
+        const pos = getCanvasPosition(touch);
+        
+        drawLine(lastX, lastY, pos.x, pos.y);
+        lastX = pos.x;
+        lastY = pos.y;
+    }
+
+    function handleTouchEnd() {
+        if (painting) {
+            painting = false;
+            saveState();
+        }
+    }
+
+    function handleResize() {
+        setTimeout(() => {
+            setupCanvas();
+        }, 100);
+    }
+
+    /* 4. Функции рисования */
+    function drawLine(x1, y1, x2, y2) {
+        if (currentTool === 'gradient') {
+            // Для градиента рисуем один раз
+            drawBrush(x1, y1, x2, y2);
+            return;
+        }
+        
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        const steps = Math.max(1, Math.floor(distance / 2));
+        
+        for (let i = 0; i <= steps; i++) {
+            const t = i / steps;
+            const x = x1 + dx * t;
+            const y = y1 + dy * t;
+            drawBrush(x, y);
+        }
+    }
+
+    function drawBrush(x, y, x2 = null, y2 = null) {
+        const size = getBrushSize();
+        const opacity = getBrushOpacity();
+        const color = getCurrentColor();
+        
+        try {
+            if (currentTool === 'brush') {
+                if (window.BRUSHES && window.BRUSHES[currentBrush]) {
+                    window.BRUSHES[currentBrush](ctx, x, y, size, color, opacity);
+                } else {
+                    drawFallbackBrush(x, y, size, color, opacity);
+                }
+            } 
+            else if (window.Tools && window.Tools[currentTool]) {
+                // Для инструментов, которым нужны обе координаты
+                if (x2 !== null && y2 !== null) {
+                    window.Tools[currentTool](ctx, x, y, x2, y2, color, opacity);
+                } else {
+                    window.Tools[currentTool](ctx, x, y, size, color, opacity);
+                }
+            }
+            else if (currentTool === 'eraser') {
+                drawEraser(x, y, size, opacity);
+            }
+        } catch (error) {
+            console.error('❌ Error drawing:', error);
+            drawFallbackBrush(x, y, size, color, opacity);
+        }
+    }
+
+    function drawFallbackBrush(x, y, size, color, opacity) {
+        ctx.save();
+        ctx.globalAlpha = opacity;
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(x, y, size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    }
+
+    function drawEraser(x, y, size, opacity) {
+        ctx.save();
+        ctx.globalCompositeOperation = 'destination-out';
+        ctx.globalAlpha = opacity;
+        ctx.beginPath();
+        ctx.arc(x, y, size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    }
+
+    /* 5. Вспомогательные функции */
+    function getCanvasPosition(e) {
+        const rect = canvas.getBoundingClientRect();
+        return {
+            x: e.clientX - rect.left,
+            y: e.clientY - rect.top
+        };
+    }
+
+    function getCurrentColor() {
+        const colorPicker = document.getElementById('colorPicker');
+        return colorPicker ? colorPicker.value : '#007aff';
+    }
+
+    function getBrushSize() {
+        const slider = document.getElementById('sizeSlider');
+        return slider ? parseInt(slider.value) : 20;
+    }
+
+    function getBrushOpacity() {
+        const slider = document.getElementById('opacitySlider');
+        return slider ? parseInt(slider.value) / 100 : 1;
+    }
+
+    /* 6. История действий */
+    function saveState() {
+        try {
+            history.length = historyStep;
+            history.push(canvas.toDataURL());
+            if (history.length > 30) history.shift();
+            historyStep = history.length;
+            
+            updateUndoRedoButtons();
+        } catch (e) {
+            console.error('Error saving state:', e);
+        }
+    }
+
+    function undo() {
+        if (historyStep > 1) {
+            historyStep--;
+            restoreState();
+        }
+    }
+
+    function redo() {
+        if (historyStep < history.length) {
+            historyStep++;
+            restoreState();
+        }
+    }
+
+    function restoreState() {
+        if (historyStep > 0 && history[historyStep - 1]) {
+            const img = new Image();
+            img.onload = () => {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0);
+            };
+            img.src = history[historyStep - 1];
+        }
+        updateUndoRedoButtons();
+    }
+
+    function updateUndoRedoButtons() {
+        const undoBtn = document.getElementById('undoBtn');
+        const redoBtn = document.getElementById('redoBtn');
+        if (undoBtn) undoBtn.disabled = historyStep <= 1;
+        if (redoBtn) redoBtn.disabled = historyStep >= history.length;
+    }
+
+    /* 7. Настройка интерфейса */
+    function setupUI() {
+        console.log('⚙️ Setting up UI...');
+        
+        setupBrushes();
+        setupTools();
+        setupColorPresets();
+        setupActions();
+        setupSliders();
+        setupMobileUI();
+        
+        console.log('✅ UI setup completed');
+    }
+
+    function setupBrushes() {
+        const brushSelect = document.getElementById('brushSelect');
+        const brushCategory = document.getElementById('brushCategory');
+        
+        if (!brushSelect) {
+            console.error('❌ brushSelect element not found');
+            return;
+        }
+
+        // Загружаем кисти
+        loadBrushes();
+        
+        // Обработчик категорий
+        if (brushCategory) {
+            brushCategory.addEventListener('change', (e) => {
+                updateBrushList(e.target.value);
+            });
+        }
+
+        // Обработчик выбора кисти
+        brushSelect.addEventListener('change', (e) => {
+            currentBrush = e.target.value;
+            updateBrushInfo();
         });
+    }
+
+    function loadBrushes() {
+        setTimeout(() => {
+            if (window.BRUSHES && Object.keys(window.BRUSHES).length > 0) {
+                console.log('🎨 Brushes loaded:', Object.keys(window.BRUSHES).length + ' brushes');
+                updateBrushList('all');
+            } else {
+                console.warn('⚠️ BRUSHES not loaded, creating fallback brushes');
+                createFallbackBrushes();
+                updateBrushList('all');
+            }
+        }, 100);
+    }
+
+    function updateBrushList(category = 'all') {
+        const brushSelect = document.getElementById('brushSelect');
+        const brushCount = document.getElementById('brushCount');
         
+        if (!brushSelect || !window.BRUSHES) return;
+
+        const allBrushes = Object.keys(window.BRUSHES);
+        let filteredBrushes = allBrushes;
+
+        // Фильтрация по категориям
+        if (category !== 'all') {
+            const categories = {
+                'basic': allBrushes.filter(name => 
+                    name.includes('Круглая') || name.includes('Квадратная') || 
+                    name.includes('Карандаш') || name.includes('Щетина') ||
+                    name.includes('Каллиграфия') || name.includes('Тушь') ||
+                    name.includes('Контур') || name.includes('Мастихин')
+                ),
+                'paint': allBrushes.filter(name => 
+                    name.includes('Акварель') || name.includes('Масло') || 
+                    name.includes('Гуашь') || name.includes('Акрил') ||
+                    name.includes('Пастель') || name.includes('Аэрограф') ||
+                    name.includes('Темпера') || name.includes('Фреска')
+                ),
+                'texture': allBrushes.filter(name => 
+                    name.includes('Холст') || name.includes('Бумага') || 
+                    name.includes('Песок') || name.includes('Мрамор') ||
+                    name.includes('Кора') || name.includes('Камень') ||
+                    name.includes('Листва') || name.includes('Ткань')
+                ),
+                'anime': allBrushes.filter(name => 
+                    name.includes('Аниме') || name.includes('Блик') ||
+                    name.includes('Румянец') || name.includes('Свет')
+                ),
+                '3d': allBrushes.filter(name => 
+                    name.includes('Металл') || name.includes('Стекло') || 
+                    name.includes('Керамика') || name.includes('Пластик') ||
+                    name.includes('Дерево') || name.includes('Кожа') ||
+                    name.includes('Неон') || name.includes('Лёд')
+                )
+            };
+            
+            filteredBrushes = categories[category] || allBrushes;
+        }
+
+        // Очищаем и заполняем список
+        brushSelect.innerHTML = '';
+        filteredBrushes.forEach(name => {
+            const option = document.createElement('option');
+            option.value = name;
+            option.textContent = name;
+            brushSelect.appendChild(option);
+        });
+
+        // Устанавливаем текущую кисть
+        if (filteredBrushes.length > 0) {
+            currentBrush = filteredBrushes[0];
+            brushSelect.value = currentBrush;
+        }
+
+        // Обновляем счетчик
+        if (brushCount) {
+            brushCount.textContent = `${filteredBrushes.length}+`;
+        }
+
         updateBrushInfo();
-        console.log(`🎨 Color changed to: ${color}`);
-      });
-    });
-  }
+    }
 
-  function setupActionButtons() {
-    // Очистка холста
-    const clearBtn = document.getElementById('clearBtn');
-    if (clearBtn) {
-      clearBtn.addEventListener('click', () => {
-        if (confirm('Очистить весь холст?')) {
-          ctx.fillStyle = '#ffffff';
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
-          saveState();
-          console.log('✅ Canvas cleared');
+    function createFallbackBrushes() {
+        window.BRUSHES = {
+            'Круглая': (ctx, x, y, r, color, op) => {
+                ctx.save();
+                ctx.globalAlpha = op;
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                ctx.arc(x, y, r, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            },
+            'Квадратная': (ctx, x, y, r, color, op) => {
+                ctx.save();
+                ctx.globalAlpha = op;
+                ctx.fillStyle = color;
+                ctx.fillRect(x - r, y - r, r * 2, r * 2);
+                ctx.restore();
+            },
+            'Мягкая круглая': (ctx, x, y, r, color, op) => {
+                ctx.save();
+                const gradient = ctx.createRadialGradient(x, y, 0, x, y, r);
+                gradient.addColorStop(0, color);
+                gradient.addColorStop(1, color.replace(')', ',0)').replace('rgb', 'rgba'));
+                ctx.globalAlpha = op;
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(x, y, r, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+        };
+    }
+
+    function setupTools() {
+        const toolButtons = document.querySelectorAll('.tool-btn');
+        if (toolButtons.length === 0) {
+            console.error('❌ No tool buttons found');
+            return;
         }
-      });
+
+        toolButtons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                toolButtons.forEach(b => b.classList.remove('active'));
+                e.currentTarget.classList.add('active');
+                currentTool = e.currentTarget.dataset.tool;
+                console.log('🔧 Selected tool:', currentTool);
+                updateBrushInfo();
+            });
+        });
+
+        // Активируем первую кнопку
+        toolButtons[0].classList.add('active');
     }
 
-    // Сохранение
-    const saveBtn = document.getElementById('saveBtn');
-    if (saveBtn) {
-      saveBtn.addEventListener('click', () => {
-        const link = document.createElement('a');
-        link.download = `artflow-${Date.now()}.png`;
-        link.href = canvas.toDataURL('image/png');
-        link.click();
-        console.log('💾 Image saved as PNG');
-      });
-    }
-
-    // Экспорт
-    const exportBtn = document.getElementById('exportBtn');
-    const exportFmt = document.getElementById('exportFormat');
-    if (exportBtn && exportFmt) {
-      exportBtn.addEventListener('click', () => {
-        const fmt = exportFmt.value || 'png';
-        const mimeType = fmt === 'jpg' ? 'image/jpeg' : `image/${fmt}`;
+    function setupColorPresets() {
+        const presets = document.querySelectorAll('.color-preset');
+        const colorPicker = document.getElementById('colorPicker');
         
-        canvas.toBlob(blob => {
-          const a = document.createElement('a');
-          a.href = URL.createObjectURL(blob);
-          a.download = `artflow-${Date.now()}.${fmt}`;
-          a.click();
-          URL.revokeObjectURL(a.href);
-          console.log(`📤 Exported as ${fmt.toUpperCase()}`);
-        }, mimeType, 0.95);
-      });
-    }
-
-    // Undo/Redo
-    const undoBtn = document.getElementById('undoBtn');
-    const redoBtn = document.getElementById('redoBtn');
-    if (undoBtn) undoBtn.addEventListener('click', undo);
-    if (redoBtn) redoBtn.addEventListener('click', redo);
-
-    // Новый слой
-    const newLayerBtn = document.getElementById('newLayerBtn');
-    if (newLayerBtn) {
-      newLayerBtn.addEventListener('click', () => {
-        if (window.Layers && window.Layers.createLayer) {
-          window.Layers.createLayer();
-        } else {
-          console.log('📝 Creating simple layer');
-          alert('Слой создан! В полной версии доступна продвинутая система слоев.');
+        if (presets.length === 0) {
+            console.warn('⚠️ No color presets found');
+            return;
         }
-      });
+
+        presets.forEach(preset => {
+            preset.addEventListener('click', () => {
+                const color = preset.dataset.color;
+                if (colorPicker && color) {
+                    colorPicker.value = color;
+                }
+            });
+        });
     }
 
-    // Инициализация состояния кнопок
-    updateUndoRedoButtons();
-  }
-
-  function setupMobileControls() {
-    const mobileToggle = document.getElementById('mobileToggle');
-    const mobileModal = document.getElementById('mobileModal');
-    const mobileModalClose = document.getElementById('mobileModalClose');
-    
-    if (mobileToggle && mobileModal) {
-      mobileToggle.addEventListener('click', () => {
-        mobileModal.style.display = 'flex';
-      });
-    }
-    
-    if (mobileModalClose) {
-      mobileModalClose.addEventListener('click', () => {
-        mobileModal.style.display = 'none';
-      });
-    }
-    
-    // Закрытие модального окна при клике вне его
-    if (mobileModal) {
-      mobileModal.addEventListener('click', (e) => {
-        if (e.target === mobileModal) {
-          mobileModal.style.display = 'none';
+    function setupActions() {
+        // Кнопка Очистить
+        const clearBtn = document.getElementById('clearBtn');
+        if (clearBtn) {
+            clearBtn.addEventListener('click', () => {
+                ctx.fillStyle = '#FFFFFF';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                saveState();
+                console.log('✅ Canvas cleared');
+            });
         }
-      });
+
+        // Кнопка Сохранить
+        const saveBtn = document.getElementById('saveBtn');
+        if (saveBtn) {
+            saveBtn.addEventListener('click', () => {
+                const link = document.createElement('a');
+                link.download = `artflow-${Date.now()}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+                console.log('💾 Image saved');
+            });
+        }
+
+        // Кнопки Отмена/Повтор
+        const undoBtn = document.getElementById('undoBtn');
+        const redoBtn = document.getElementById('redoBtn');
+        
+        if (undoBtn) undoBtn.addEventListener('click', undo);
+        if (redoBtn) redoBtn.addEventListener('click', redo);
+
+        // Новый слой
+        const newLayerBtn = document.getElementById('newLayerBtn');
+        if (newLayerBtn) {
+            newLayerBtn.addEventListener('click', () => {
+                if (window.Layers && window.Layers.createLayer) {
+                    window.Layers.createLayer();
+                } else {
+                    console.log('📝 Layers system not available');
+                }
+            });
+        }
     }
-  }
 
-  function updateBrushInfo() {
-    const brushInfo = document.getElementById('brushInfo');
-    if (brushInfo) {
-      brushInfo.textContent = `${currentBrush} | ${brushSize}px`;
+    function setupSliders() {
+        // Размер кисти
+        const sizeSlider = document.getElementById('sizeSlider');
+        const sizeOut = document.getElementById('sizeOut');
+        if (sizeSlider && sizeOut) {
+            sizeSlider.addEventListener('input', () => {
+                sizeOut.textContent = sizeSlider.value;
+                updateBrushInfo();
+            });
+            sizeOut.textContent = sizeSlider.value;
+        }
+
+        // Прозрачность
+        const opacitySlider = document.getElementById('opacitySlider');
+        const opacityOut = document.getElementById('opacityOut');
+        if (opacitySlider && opacityOut) {
+            opacitySlider.addEventListener('input', () => {
+                opacityOut.textContent = opacitySlider.value + '%';
+                updateBrushInfo();
+            });
+            opacityOut.textContent = opacitySlider.value + '%';
+        }
     }
-  }
 
-  function updateResponsiveLayout() {
-    isMobile = window.innerWidth <= 768;
-    document.body.classList.toggle('mobile-mode', isMobile);
-    
-    // Скрываем/показываем панель инструментов на мобильных
-    const toolbar = document.getElementById('toolbar');
-    if (toolbar) {
-      if (isMobile) {
-        toolbar.style.transform = 'translateX(-100%)';
-      } else {
-        toolbar.style.transform = 'translateX(0)';
-      }
+    function setupMobileUI() {
+        const mobileToggle = document.getElementById('mobileToggle');
+        const panel = document.getElementById('toolbar');
+
+        if (mobileToggle && panel) {
+            mobileToggle.addEventListener('click', () => {
+                panel.classList.toggle('show');
+            });
+        }
     }
-    
-    console.log(`📱 ${isMobile ? 'Mobile' : 'Desktop'} layout activated`);
-  }
 
-  function loadInitialState() {
-    // Загрузка начальных настроек
-    updateBrushInfo();
-    updateUndoRedoButtons();
-    
-    // Устанавливаем начальную кисть
-    if (window.BRUSHES && window.BRUSHES.round) {
-      currentBrush = 'round';
+    function updateBrushInfo() {
+        const brushInfo = document.getElementById('brushInfo');
+        if (brushInfo) {
+            if (currentTool === 'brush') {
+                brushInfo.textContent = `${currentBrush} | ${getBrushSize()}px`;
+            } else {
+                brushInfo.textContent = `${currentTool} | ${getBrushSize()}px`;
+            }
+        }
     }
-    
-    console.log('🎯 Initial state loaded');
-  }
 
-  // === ЗАПУСК ПРИЛОЖЕНИЯ ===
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-  } else {
-    init();
-  }
+    /* 8. Запуск приложения */
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
 
-  // Глобальный интерфейс для других модулей
-  window.App = {
-    canvas,
-    ctx,
-    saveState,
-    undo,
-    redo,
-    setupCanvas,
-    getCurrentTool: () => currentTool,
-    getCurrentBrush: () => currentBrush,
-    getCurrentColor: () => currentColor
-  };
+    // Глобальный интерфейс
+    window.App = {
+        canvas,
+        ctx,
+        saveState,
+        undo,
+        redo,
+        getCurrentTool: () => currentTool,
+        getCurrentBrush: () => currentBrush
+    };
 
-  console.log('🚀 ArtFlow Pro loaded successfully');
+    console.log('🚀 ArtFlow Pro loaded successfully');
 })();
