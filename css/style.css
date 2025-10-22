@@ -32,6 +32,11 @@ body {
   color: var(--accent);
   text-align: center;
 }
+h2 {
+  font-size: 1rem;
+  color: var(--accent);
+  margin-top: 0.5rem;
+}
 label {
   display: flex;
   flex-direction: column;
@@ -64,6 +69,9 @@ button {
 }
 button:active {
   transform: scale(0.96);
+}
+button.eraser-on {
+  background: #ffaa00 !important;
 }
 canvas {
   flex: 1;
