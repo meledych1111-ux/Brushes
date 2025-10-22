@@ -5,10 +5,13 @@ window.core = (() => {
   let painting = false;
   let lastX = 0, lastY = 0;
 
-  /* --- отключаем поведение Safari «только стилус» --- */
+  /* 0. Заглушка до загрузки main.js (чтобы не было ReferenceError) */
+  window.drawBrush = () => {};
+
+  /* 1. Отключаем поведение Safari «только стилус» */
   canvas.style.touchAction = 'none';
 
-  /* --- hi-dpi --- */
+  /* 2. Hi-DPI */
   function resize() {
     const dpr = window.devicePixelRatio || 1;
     const rect = canvas.getBoundingClientRect();
@@ -19,7 +22,7 @@ window.core = (() => {
   window.addEventListener('resize', resize);
   resize();
 
-  /* --- undo/redo --- */
+  /* 3. Undo/Redo (30 шагов) */
   const history = [];
   let step = -1;
   function saveState() {
@@ -45,7 +48,7 @@ window.core = (() => {
     }
   };
 
-  /* --- pointer-events c passive: false --- */
+  /* 4. Pointer-events: ПАЛЕЦ + СТИЛУС (passive: false) */
   function getPos(e) {
     const rect = canvas.getBoundingClientRect();
     return { x: e.clientX - rect.left, y: e.clientY - rect.top };
@@ -74,6 +77,6 @@ window.core = (() => {
   });
   canvas.addEventListener('pointerleave', () => painting = false);
 
-  /* --- public --- */
+  /* 5. Публичное API */
   return { canvas, ctx, saveState };
 })();
