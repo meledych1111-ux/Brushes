@@ -1,55 +1,56 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <title>Художественный редактор</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no"/>
+  <title>ArtFlow 250 + Layers</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <div id="toolbar">
-    <label>Кисть:
+  <aside class="panel" id="toolbar">
+    <h1>ArtFlow 250</h1>
+
+    <label>Кисть
       <select id="brushSelect"></select>
     </label>
-    <label>Инструмент:
-      <select id="toolSelect"></select>
+    <label>Размер
+      <input type="range" id="sizeSlider" min="1" max="120" value="20">
+      <output id="sizeOut">20</output>
     </label>
-    <label>Фигура:
-      <select id="figureSelect"></select>
-    </label>
-    <label>Цвет:
-      <input type="color" id="colorPicker" value="#000000">
-    </label>
-    <label>Размер:
-      <input type="range" id="sizeRange" min="1" max="100" value="20">
-    </label>
-    <label>Прозрачность:
-      <input type="range" id="opacityRange" min="0" max="1" step="0.05" value="1">
+    <label>Цвет
+      <input type="color" id="colorPicker" value="#007aff">
     </label>
 
-    <button id="newLayerBtn">Новый слой</button>
-    <label>Слой:
+    <!-- Слои -->
+    <h2>Слои</h2>
+    <div class="row">
+      <button id="newLayerBtn">+ Слой</button>
+    </div>
+    <label>Активный
       <select id="layerSelect"></select>
     </label>
-    <label>Прозрачность слоя:
+    <label>Прозрачность
       <input type="range" id="layerOpacity" min="0" max="1" step="0.05" value="1">
     </label>
 
-    <button id="undoBtn">Отмена</button>
-    <button id="redoBtn">Повтор</button>
-    <button id="clearBtn">Очистить</button>
-    <button id="saveBtn">Сохранить</button>
-  </div>
+    <!-- Ластик / размытие -->
+    <h2>Инструменты</h2>
+    <select id="toolSelect">
+      <option value="brush">Кисть</option>
+      <option value="eraser">Ластик</option>
+      <option value="smudge">Смазка</option>
+      <option value="blur">Размытие</option>
+    </select>
 
-  <div id="canvasContainer">
-    <canvas id="mainCanvas"></canvas>
-  </div>
+    <button id="clearBtn">🗑 Очистить</button>
+    <button id="saveBtn">💾 Сохранить PNG</button>
+  </aside>
 
-  <script src="js/app.js"></script>
-  <script src="js/layers.js"></script>
+  <canvas id="canvas"></canvas>
+
   <script src="js/brushes.js"></script>
-  <script src="js/extra.js"></script>
+  <script src="js/layers.js"></script>
   <script src="js/tools.js"></script>
-  <script src="js/main.js"></script>
+  <script src="js/app.js"></script>
 </body>
 </html>
