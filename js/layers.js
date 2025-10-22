@@ -15,7 +15,7 @@
   }
 
   function resizeLayer(canvas) {
-    const dpr = window.App.getDpr ? window.App.getDpr() : (window.devicePixelRatio || 1);
+    const dpr = window.App ? window.App.getDpr() : (window.devicePixelRatio || 1);
     const w = window.innerWidth;
     const h = window.innerHeight - document.getElementById('toolbar').offsetHeight;
     canvas.width = Math.max(1, Math.floor(w * dpr));
@@ -40,9 +40,7 @@
   }
 
   function setActive(index) {
-    if (index >= 0 && index < layers.length) {
-      activeIndex = index;
-    }
+    if (index >= 0 && index < layers.length) activeIndex = index;
   }
 
   function getActiveCtx() {
@@ -52,11 +50,9 @@
   function composeLayers() {
     const baseCtx = window.App.ctx;
     const baseCanvas = window.App.canvas;
-    const w = baseCanvas.width / window.App.getDpr();
-    const h = baseCanvas.height / window.App.getDpr();
+    const w = baseCanvas.width / (window.App.getDpr ? window.App.getDpr() : 1);
+    const h = baseCanvas.height / (window.App.getDpr ? window.App.getDpr() : 1);
     baseCtx.clearRect(0, 0, w, h);
-
-    // сначала рисуем базовый слой App (он пуст как фон), затем — пользовательские слои
     layers.forEach(l => {
       baseCtx.save();
       baseCtx.globalAlpha = l.opacity;
@@ -65,7 +61,6 @@
     });
   }
 
-  // UI интеграция
   function updateLayerUI() {
     const sel = document.getElementById('layerSelect');
     if (!sel) return;
@@ -79,10 +74,8 @@
     });
   }
 
-  // создаём начальный слой
   createLayer('Layer 1');
 
-  // экспорт
   window.Layers = {
     createLayer,
     setOpacity,
@@ -94,7 +87,6 @@
     get activeIndex() { return activeIndex; }
   };
 
-  // события UI
   window.addEventListener('resize', resizeAll);
 
   const newBtn = document.getElementById('newLayerBtn');
