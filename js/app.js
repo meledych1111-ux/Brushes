@@ -4,6 +4,9 @@ window.core = (() => {
   const ctx = canvas.getContext('2d');
   let painting = false;
   let lastX = 0, lastY = 0;
+  
+  /* 0.1 Утилиты */
+const dist = (x1, y1, x2, y2) => Math.hypot(x2 - x1, y2 - y1);
 
   /* 0. Заглушка до загрузки main.js (чтобы не было ReferenceError) */
   window.drawBrush = () => {};
