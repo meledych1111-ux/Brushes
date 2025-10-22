@@ -1,14 +1,5 @@
-// js/app.js - полностью обновленное ядро приложения
+// js/app.js - исправленное ядро приложения
 (() => {
-    // Проверка загрузки всех модулей
-    const requiredModules = ['BRUSHES', 'TOOLS', 'FIGURES', 'TEXTURES', 'ANIME_TOOLS', 'THREE_D_TOOLS'];
-    const missingModules = requiredModules.filter(module => !window[module]);
-    
-    if (missingModules.length > 0) {
-        console.error('Missing modules:', missingModules);
-        return;
-    }
-
     // Основные элементы
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
@@ -29,11 +20,15 @@
 
     /* 1. Инициализация приложения */
     function init() {
+        console.log('Initializing ArtFlow Pro...');
         setupCanvas();
         setupEventListeners();
         setupUI();
-        initializeLayers();
         updateCanvasInfo();
+        
+        // Тестовый рисунок для проверки
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
         
         console.log('ArtFlow Pro initialized successfully');
     }
@@ -41,23 +36,32 @@
     /* 2. Настройка Canvas */
     function setupCanvas() {
         resizeCanvas();
-        setupGrid();
+        
+        // Заливаем белым фон
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
 
     function resizeCanvas() {
         const dpr = window.devicePixelRatio || 1;
         const toolbar = document.getElementById('toolbar');
-        const mobileToolbar = document.getElementById('mobileToolbar');
         
         let toolbarHeight = 0;
-        if (isMobile && mobileToolbar) {
-            toolbarHeight = mobileToolbar.offsetHeight;
-        } else if (toolbar) {
-            toolbarHeight = toolbar.offsetHeight;
+        let panelWidth = 0;
+        
+        if (isMobile) {
+            const mobileToolbar = document.getElementById('mobileToolbar');
+            toolbarHeight = mobileToolbar ? mobileToolbar.offsetHeight : 60;
+        } else {
+            toolbarHeight = toolbar ? toolbar.offsetHeight : 0;
+            panelWidth = toolbar ? toolbar.offsetWidth : 380;
         }
         
-        const w = window.innerWidth - (isMobile ? 0 : 380); // Ширина панели
-        const h = Math.max(100, window.innerHeight - toolbarHeight);
+        // Исправлено: правильный расчет размеров
+        const w = window.innerWidth - panelWidth;
+        const h = window.innerHeight - toolbarHeight;
+        
+        console.log(`Canvas size: ${w}x${h}, DPR: ${dpr}`);
         
         canvas.width = Math.max(1, Math.floor(w * dpr));
         canvas.height = Math.max(1, Math.floor(h * dpr));
@@ -67,16 +71,9 @@
         ctx.setTransform(1, 0, 0, 1, 0, 0);
         ctx.scale(dpr, dpr);
         
-        if (window.Layers) {
-            window.Layers.resizeAll();
-        }
-    }
-
-    function setupGrid() {
-        const grid = document.getElementById('canvasGrid');
-        if (grid && document.getElementById('gridToggle')?.checked) {
-            grid.classList.add('visible');
-        }
+        // Перерисовываем белый фон
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, w, h);
     }
 
     /* 3. Обработчики событий */
@@ -91,9 +88,6 @@
         // События окна
         window.addEventListener('resize', handleResize);
         window.addEventListener('orientationchange', handleOrientationChange);
-
-        // Горячие клавиши
-        document.addEventListener('keydown', handleKeyDown);
     }
 
     function handlePointerDown(e) {
@@ -105,14 +99,7 @@
         lastY = pos.y;
         
         const pressure = e.pressure > 0 ? e.pressure : 1;
-        
-        if (isShapeToolActive()) {
-            handleShapeTool(pos.x, pos.y, pressure);
-        } else if (isStampToolActive()) {
-            handleStampTool(pos.x, pos.y, pressure);
-        } else {
-            drawBrush(pos.x, pos.y, pressure);
-        }
+        drawBrush(pos.x, pos.y, pressure);
         
         updateCanvasInfo('Рисование...');
     }
@@ -128,11 +115,7 @@
         const pos = getCanvasPosition(e);
         const pressure = e.pressure > 0 ? e.pressure : 1;
         
-        if (currentTool === 'brush' || currentTool === 'eraser') {
-            drawLine(lastX, lastY, pos.x, pos.y, pressure);
-        } else if (window.Tools && window.Tools[currentTool]) {
-            window.Tools[currentTool](getActiveCtx(), lastX, lastY, pos.x, pos.y, getCurrentColor(), pressure);
-        }
+        drawLine(lastX, lastY, pos.x, pos.y, pressure);
         
         lastX = pos.x;
         lastY = pos.y;
@@ -150,40 +133,24 @@
 
     function handleResize() {
         isMobile = window.innerWidth <= 768;
-        resizeCanvas();
-        updateCanvasInfo();
-    }
-
-    function handleOrientationChange() {
         setTimeout(() => {
             resizeCanvas();
             updateCanvasInfo();
         }, 100);
     }
 
-    function handleKeyDown(e) {
-        // Ctrl+Z - отмена
-        if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
-            e.preventDefault();
-            undo();
-        }
-        // Ctrl+Y или Ctrl+Shift+Z - повтор
-        if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
-            e.preventDefault();
-            redo();
-        }
-        // Пробел - временно переключиться на руку (панорамирование)
-        if (e.key === ' ') {
-            e.preventDefault();
-            canvas.style.cursor = 'grab';
-        }
+    function handleOrientationChange() {
+        setTimeout(() => {
+            resizeCanvas();
+            updateCanvasInfo();
+        }, 500);
     }
 
     /* 4. Функции рисования */
     function drawLine(x1, y1, x2, y2, pressure = 1) {
         const dx = x2 - x1, dy = y2 - y1;
         const distance = Math.hypot(dx, dy);
-        const steps = Math.max(1, Math.ceil(distance / getSpacing()));
+        const steps = Math.max(1, Math.ceil(distance / 2));
         
         for (let i = 0; i <= steps; i++) {
             const t = i / steps;
@@ -197,68 +164,41 @@
         const size = getBrushSize() * pressure;
         const opacity = getBrushOpacity() * pressure;
         const color = getCurrentColor();
-        const hardness = getBrushHardness();
         
-        const activeCtx = getActiveCtx();
-        if (!activeCtx) return;
+        console.log(`Drawing at ${x},${y} with brush: ${currentBrush}, size: ${size}, color: ${color}`);
 
         if (currentTool === 'brush') {
-            if (window.BRUSHES[currentBrush]) {
-                window.BRUSHES[currentBrush](activeCtx, x, y, size, color, opacity, hardness);
+            if (window.BRUSHES && window.BRUSHES[currentBrush]) {
+                window.BRUSHES[currentBrush](ctx, x, y, size, color, opacity);
+            } else {
+                // Резервная кисть если основная не найдена
+                console.warn('Brush not found, using fallback');
+                ctx.save();
+                ctx.globalAlpha = opacity;
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                ctx.arc(x, y, size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
             }
         } else if (currentTool === 'eraser') {
-            window.Tools.eraser(activeCtx, x, y, size, color, opacity);
-        } else if (window.Tools && window.Tools[currentTool]) {
-            window.Tools[currentTool](activeCtx, x, y, size, color, opacity);
-        }
-        
-        if (window.Layers) {
-            window.Layers.composeLayers();
-        }
-    }
-
-    /* 5. Инструменты фигур и штампов */
-    function isShapeToolActive() {
-        return document.querySelector('.shape-btn.active') !== null;
-    }
-
-    function isStampToolActive() {
-        const stampSelect = document.getElementById('stampSelect');
-        return stampSelect && stampSelect.value !== '';
-    }
-
-    function handleShapeTool(x, y, pressure) {
-        const activeShape = document.querySelector('.shape-btn.active')?.dataset.shape;
-        const size = getBrushSize() * pressure;
-        const color = getCurrentColor();
-        const opacity = getBrushOpacity();
-        
-        if (activeShape && window.FIGURES[activeShape]) {
-            window.FIGURES[activeShape](getActiveCtx(), x, y, size, color, opacity);
-            if (window.Layers) window.Layers.composeLayers();
+            // Ластик
+            ctx.save();
+            ctx.globalCompositeOperation = 'destination-out';
+            ctx.globalAlpha = opacity;
+            ctx.beginPath();
+            ctx.arc(x, y, size, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
         }
     }
 
-    function handleStampTool(x, y, pressure) {
-        const stampSelect = document.getElementById('stampSelect');
-        const stampType = stampSelect.value;
-        const size = getBrushSize() * pressure;
-        const color = getCurrentColor();
-        const opacity = getBrushOpacity();
-        
-        if (stampType && window.applyStamp) {
-            window.applyStamp(stampType, getActiveCtx(), x, y, size, color, opacity);
-            if (window.Layers) window.Layers.composeLayers();
-        }
-    }
-
-    /* 6. Вспомогательные функции */
+    /* 5. Вспомогательные функции */
     function getCanvasPosition(e) {
         const rect = canvas.getBoundingClientRect();
-        const dpr = window.devicePixelRatio || 1;
         return {
-            x: (e.clientX - rect.left) * (canvas.width / rect.width / dpr),
-            y: (e.clientY - rect.top) * (canvas.height / rect.height / dpr)
+            x: e.clientX - rect.left,
+            y: e.clientY - rect.top
         };
     }
 
@@ -268,10 +208,6 @@
         if (coordinates) {
             coordinates.textContent = `X:${Math.round(pos.x)} Y:${Math.round(pos.y)}`;
         }
-    }
-
-    function getActiveCtx() {
-        return window.Layers ? window.Layers.getActiveCtx() : ctx;
     }
 
     function getCurrentColor() {
@@ -288,25 +224,14 @@
         return slider ? parseInt(slider.value, 10) / 100 : 1;
     }
 
-    function getBrushHardness() {
-        const slider = document.getElementById('hardnessSlider');
-        return slider ? parseInt(slider.value, 10) / 100 : 1;
-    }
-
-    function getSpacing() {
-        const slider = document.getElementById('spacingSlider');
-        const value = slider ? parseInt(slider.value, 10) : 25;
-        return Math.max(1, 5 - (value / 25)); // Преобразуем в интервал между точками
-    }
-
-    /* 7. История действий */
+    /* 6. История действий */
     function saveState() {
         if (!canvas) return;
         
         try {
             history.length = historyStep;
             history.push(canvas.toDataURL());
-            if (history.length > 50) history.shift(); // Увеличили историю до 50 шагов
+            if (history.length > 50) history.shift();
             historyStep = history.length;
             
             updateUndoRedoButtons();
@@ -351,7 +276,7 @@
         if (redoBtn) redoBtn.disabled = historyStep >= history.length;
     }
 
-    /* 8. Обновление интерфейса */
+    /* 7. Обновление интерфейса */
     function updateCanvasInfo(message = '') {
         const info = document.getElementById('canvasInfo');
         if (!info) return;
@@ -369,18 +294,28 @@
     function setupUI() {
         setupBrushes();
         setupTools();
-        setupShapes();
         setupColorPresets();
         setupMobileUI();
-        setupSettings();
+        
+        console.log('UI setup completed');
     }
 
     function setupBrushes() {
         const brushSelect = document.getElementById('brushSelect');
         const brushCategory = document.getElementById('brushCategory');
         
-        if (brushSelect && window.BRUSHES) {
-            updateBrushList('all');
+        if (brushSelect) {
+            // Ждем загрузки кистей
+            setTimeout(() => {
+                if (window.BRUSHES) {
+                    updateBrushList('all');
+                } else {
+                    console.error('BRUSHES not loaded');
+                    // Создаем базовые кисти на случай ошибки
+                    createFallbackBrushes();
+                    updateBrushList('all');
+                }
+            }, 100);
             
             if (brushCategory) {
                 brushCategory.addEventListener('change', (e) => {
@@ -390,6 +325,7 @@
             
             brushSelect.addEventListener('change', (e) => {
                 currentBrush = e.target.value;
+                console.log('Selected brush:', currentBrush);
                 updateCanvasInfo();
             });
         }
@@ -399,47 +335,102 @@
         const brushSelect = document.getElementById('brushSelect');
         if (!brushSelect) return;
 
-        const allBrushes = Object.keys(window.BRUSHES);
-        let filteredBrushes = allBrushes;
-
-        if (category !== 'all') {
-            // Группировка кистей по категориям (упрощенная версия)
-            const categories = {
-                'basic': allBrushes.slice(0, 15),
-                'paint': allBrushes.slice(15, 30),
-                'texture': allBrushes.slice(30, 40),
-                'anime': allBrushes.slice(40, 50),
-                '3d': allBrushes.slice(50, 60),
-                'special': allBrushes.slice(60)
-            };
-            filteredBrushes = categories[category] || allBrushes;
+        let brushes = [];
+        
+        if (window.BRUSHES) {
+            const allBrushes = Object.keys(window.BRUSHES);
+            
+            if (category === 'all') {
+                brushes = allBrushes;
+            } else {
+                // Простая группировка для тестирования
+                brushes = allBrushes.filter(name => {
+                    if (category === 'basic') return name.includes('Круглая') || name.includes('Квадратная') || name.includes('Карандаш');
+                    if (category === 'paint') return name.includes('Акварель') || name.includes('Масло') || name.includes('Гуашь');
+                    if (category === 'texture') return name.includes('Холст') || name.includes('Бумага') || name.includes('Ткань');
+                    return true;
+                });
+            }
+        } else {
+            // Fallback кисти
+            brushes = ['Круглая', 'Квадратная', 'Мягкая круглая', 'Карандаш'];
         }
 
         brushSelect.innerHTML = '';
-        filteredBrushes.forEach(name => {
+        brushes.forEach(name => {
             const option = document.createElement('option');
             option.value = name;
             option.textContent = name;
             brushSelect.appendChild(option);
         });
 
-        // Обновляем счетчик кистей
+        // Устанавливаем первую кисть
+        if (brushes.length > 0) {
+            currentBrush = brushes[0];
+            brushSelect.value = currentBrush;
+        }
+
+        // Обновляем счетчик
         const brushCount = document.getElementById('brushCount');
         if (brushCount) {
-            brushCount.textContent = `${filteredBrushes.length}+`;
+            brushCount.textContent = `${brushes.length}+`;
         }
+    }
+
+    function createFallbackBrushes() {
+        window.BRUSHES = {
+            'Круглая': (ctx, x, y, r, color, op) => {
+                ctx.save();
+                ctx.globalAlpha = op;
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                ctx.arc(x, y, r, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            },
+            'Квадратная': (ctx, x, y, r, color, op) => {
+                ctx.save();
+                ctx.globalAlpha = op;
+                ctx.fillStyle = color;
+                ctx.fillRect(x - r, y - r, r * 2, r * 2);
+                ctx.restore();
+            },
+            'Мягкая круглая': (ctx, x, y, r, color, op) => {
+                ctx.save();
+                const gradient = ctx.createRadialGradient(x, y, 0, x, y, r);
+                gradient.addColorStop(0, color);
+                gradient.addColorStop(1, color.replace(')', ',0)').replace('rgb', 'rgba'));
+                ctx.globalAlpha = op;
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(x, y, r, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            },
+            'Карандаш': (ctx, x, y, r, color, op) => {
+                ctx.save();
+                ctx.globalAlpha = op;
+                ctx.strokeStyle = color;
+                ctx.lineWidth = Math.max(1, r / 3);
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                ctx.moveTo(x - 1, y);
+                ctx.lineTo(x + 1, y);
+                ctx.stroke();
+                ctx.restore();
+            }
+        };
     }
 
     function setupTools() {
         const toolButtons = document.querySelectorAll('.tool-btn');
         toolButtons.forEach(btn => {
             btn.addEventListener('click', (e) => {
-                // Убираем активный класс у всех кнопок
                 toolButtons.forEach(b => b.classList.remove('active'));
-                // Добавляем активный класс текущей кнопке
                 e.currentTarget.classList.add('active');
                 
                 currentTool = e.currentTarget.dataset.tool;
+                console.log('Selected tool:', currentTool);
                 updateCanvasInfo();
             });
         });
@@ -447,8 +438,11 @@
         // Настройка слайдеров
         setupSlider('sizeSlider', 'sizeOut');
         setupSlider('opacitySlider', 'opacityOut', '%');
-        setupSlider('hardnessSlider', 'hardnessOut', '%');
-        setupSlider('spacingSlider', 'spacingOut', '%');
+        
+        // Активируем первую кнопку
+        if (toolButtons.length > 0) {
+            toolButtons[0].classList.add('active');
+        }
     }
 
     function setupSlider(sliderId, outputId, suffix = '') {
@@ -462,19 +456,8 @@
             };
             
             slider.addEventListener('input', updateOutput);
-            updateOutput(); // Инициализация
+            updateOutput();
         }
-    }
-
-    function setupShapes() {
-        const shapeButtons = document.querySelectorAll('.shape-btn');
-        shapeButtons.forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                // Переключаем активное состояние
-                shapeButtons.forEach(b => b.classList.remove('active'));
-                e.currentTarget.classList.add('active');
-            });
-        });
     }
 
     function setupColorPresets() {
@@ -496,8 +479,6 @@
         if (!isMobile) return;
 
         const mobileToggle = document.getElementById('mobileToggle');
-        const mobileModal = document.getElementById('mobileModal');
-        const mobileModalClose = document.getElementById('mobileModalClose');
         const panel = document.getElementById('toolbar');
 
         if (mobileToggle && panel) {
@@ -505,80 +486,9 @@
                 panel.classList.toggle('show');
             });
         }
-
-        if (mobileModal && mobileModalClose) {
-            const mobileMenu = document.getElementById('mobileMenu');
-            
-            if (mobileMenu) {
-                mobileMenu.addEventListener('click', () => {
-                    mobileModal.classList.add('show');
-                });
-            }
-            
-            mobileModalClose.addEventListener('click', () => {
-                mobileModal.classList.remove('show');
-            });
-            
-            // Закрытие модального окна при клике вне его
-            mobileModal.addEventListener('click', (e) => {
-                if (e.target === mobileModal) {
-                    mobileModal.classList.remove('show');
-                }
-            });
-        }
-
-        // Мобильные инструменты
-        const mobileToolButtons = document.querySelectorAll('.mobile-tool-btn');
-        mobileToolButtons.forEach(btn => {
-            btn.addEventListener('click', () => {
-                const tool = btn.dataset.tool;
-                currentTool = tool;
-                
-                // Закрываем модальное окно
-                if (mobileModal) {
-                    mobileModal.classList.remove('show');
-                }
-                
-                updateCanvasInfo();
-            });
-        });
     }
 
-    function setupSettings() {
-        // Переключатель сетки
-        const gridToggle = document.getElementById('gridToggle');
-        const canvasGrid = document.getElementById('canvasGrid');
-        
-        if (gridToggle && canvasGrid) {
-            gridToggle.addEventListener('change', (e) => {
-                if (e.target.checked) {
-                    canvasGrid.classList.add('visible');
-                } else {
-                    canvasGrid.classList.remove('visible');
-                }
-            });
-        }
-
-        // Переключатель темы
-        const darkModeToggle = document.getElementById('darkModeToggle');
-        if (darkModeToggle) {
-            darkModeToggle.addEventListener('change', (e) => {
-                document.body.classList.toggle('light-theme', !e.target.checked);
-            });
-        }
-    }
-
-    function initializeLayers() {
-        if (window.Layers) {
-            // Слои уже инициализированы в layers.js
-            return;
-        }
-        
-        // Резервная инициализация если layers.js не загружен
-        console.warn('Layers module not loaded, using basic context');
-    }
-
-    /* 9. Глобальный интерфейс */
+    /* 8. Глобальный интерфейс */
     window.App = {
         canvas,
         ctx,
@@ -590,7 +500,7 @@
         getCurrentBrush: () => currentBrush
     };
 
-    /* 10. Запуск приложения */
+    /* 9. Запуск приложения */
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
     } else {
