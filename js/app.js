@@ -623,4 +623,166 @@
     };
 
     console.log('🚀 ArtFlow Pro loaded successfully');
+    /* =====  ДОБАВЛЯЕМ ОБРАБОТЧИКИ, КОТОРЫХ НЕ ХВАТАЕТ  ===== */
+
+function setupMissingHandlers(){
+
+  /* 1. Фигуры / штампы  */
+  document.querySelectorAll('.shape-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const shape = btn.dataset.shape;          // circle / square / star ...
+      window.currentShape = shape;              // запомнили
+      currentTool = 'shape';                    // «режим фигуры»
+      updateBrushInfo();
+    });
+  });
+
+  const stampSel = document.getElementById('stampSelect');
+  if(stampSel){
+    stampSel.addEventListener('change',()=>{
+      window.currentStamp = stampSel.value;     // anime_eye / flower ...
+      currentTool = 'stamp';
+      updateBrushInfo();
+    });
+  }
+
+  /* 2. Экспорт */
+  const exportBtn = document.getElementById('exportBtn');
+  const exportFmt = document.getElementById('exportFormat');
+  if(exportBtn){
+    exportBtn.addEventListener('click',()=>{
+      const fmt = exportFmt.value;                           // png / jpg / webp
+      canvas.toBlob(blob=>{
+        const a=document.createElement('a');
+        a.href=URL.createObjectURL(blob);
+        a.download=`artflow-${Date.now()}.${fmt}`;
+        a.click();
+      },`image/${fmt}`,0.95);
+    });
+  }
+
+  /* 3. Сглаживание */
+  const smoothSlider = document.getElementById('smoothingSlider');
+  const smoothOut  = document.getElementById('smoothingOut');
+  if(smoothSlider){
+    smoothSlider.addEventListener('input',()=>{
+      const v = smoothSlider.value;
+      smoothOut.textContent = v+'%';
+      ctx.imageSmoothingEnabled = (v>0);
+      ctx.imageSmoothingQuality = (v>50)?'high':'low';
+    });
+    smoothOut.textContent = smoothSlider.value+'%';
+  }
+
+  /* 4. Дополнительные инструменты (select) */
+  const advSel = document.getElementById('advancedToolSelect');
+  if(advSel){
+    advSel.addEventListener('change',()=>{
+      currentTool = advSel.value || 'brush';   // lighten / darken / sharpen ...
+      advSel.value='';                         // сбросить <option>
+      updateBrushInfo();
+    });
+  }
+
+  /* 5. Режим «градиент» – уже есть в Tools, но не в интерфейсе */
+  /*    Если хотите кнопку «Градиент» – добавьте её в tools-grid и
+        просто сделайте currentTool = 'gradient' по клику.        */
+}
+
+/* вызываем после полной инициализации */
+document.addEventListener('DOMContentLoaded',()=>{
+  setTimeout(setupMissingHandlers,300);   // на всякий случай подождём
+});
+    /* ===== ПРОДОЛЖЕНИЕ «ДОБИВАЮЩИХ» ПРАВОК ===== */
+
+/* 6. Градиент «от-до» мышью
+      (начало – первый клик, конец – отпускание) */
+let gradientStart = null;
+function installGradientMode(){
+  const oldDown = handleMouseDown;
+  const oldUp   = handleMouseUp;
+
+  handleMouseDown = function(e){
+    if(currentTool === 'gradient'){
+      gradientStart = getCanvasPosition(e);
+      e.preventDefault();
+    }else oldDown.call(this,e);
+  };
+  handleMouseUp   = function(e){
+    if(currentTool === 'gradient' && gradientStart){
+      const gradientEnd = getCanvasPosition(e);
+      Tools.gradient(ctx,
+        gradientStart.x,gradientStart.y,
+        gradientEnd.x,  gradientEnd.y,
+        getCurrentColor(), getBrushOpacity()
+      );
+      gradientStart = null;
+      saveState();
+    }else oldUp.call(this,e);
+  };
+}
+installGradientMode();
+
+/* 7. Рисование фигур / штампов одним кликом (без движения) */
+const oldClick = (e)=>{
+  if(!painting && (currentTool==='shape'||currentTool==='stamp')){
+    const p = getCanvasPosition(e);
+    const size = getBrushSize();
+    const op   = getBrushOpacity();
+    const col  = getCurrentColor();
+
+    if(currentTool==='shape' && window.currentShape && window.FIGURES){
+      window.FIGURES[window.currentShape](ctx,p.x,p.y,size,col,op);
+      saveState();
+    }
+    if(currentTool==='stamp' && window.currentStamp && window.FIGURES){
+      window.FIGURES[window.currentStamp](ctx,p.x,p.y,size,col,op);
+      saveState();
+    }
+  }
+};
+canvas.addEventListener('mouseup',oldClick);
+
+/* 8. 3D-объёмы: добавляем переключатель «3D-режим» */
+const make3DToggle=()=>{
+  const grp = document.querySelector('.tools-grid');
+  if(!grp) return;
+  const btn=document.createElement('button');
+  btn.className='tool-btn'; btn.dataset.tool='3d'; btn.title='3D-объём';
+  btn.innerHTML='<span class="tool-icon">🧊</span><span class="tool-name">3D</span>';
+  grp.appendChild(btn);
+
+  btn.addEventListener('click',()=>{
+    currentTool='3d';            // новый режим
+    document.querySelectorAll('.tool-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    updateBrushInfo();
+  });
+};
+make3DToggle();
+
+/* 9. Собственно 3D-инструмент */
+const oldDrawBrush = drawBrush;
+drawBrush = function(x,y,x2,y2){
+  if(currentTool==='3d' && window.THREE_D_TOOLS){
+    const size=getBrushSize(), op=getBrushOpacity(), col=getCurrentColor();
+    // кисть рисует «сферу» там, где была точка
+    window.THREE_D_TOOLS.createSphere(ctx,x,y,size,col,'top-left');
+    return;
+  }
+  oldDrawBrush.call(this,x,y,x2,y2);
+};
+
+/* 10. Убираем дубль кнопки «Сохранить» (она уже есть в app.js) */
+document.querySelectorAll('#saveBtn').forEach((btn,i)=>{if(i>0) btn.remove();});
+
+/* 11. Хоткеи для оставшихся инструментов */
+document.addEventListener('keydown',e=>{
+  if(e.target.tagName==='INPUT') return;
+  switch(e.key.toLowerCase()){
+    case 'g': currentTool='gradient'; updateBrushInfo(); break; // быстрый градиент
+    case 'f': currentTool='fill';     updateBrushInfo(); break; // заливка
+    case '3': currentTool='3d';       updateBrushInfo(); break; // 3D-режим
+  }
+});
 })();
