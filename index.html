@@ -7,49 +7,49 @@
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <aside class="panel" id="toolbar">
+  <aside class="panel" id="toolbar" aria-label="Панель инструментов">
     <header class="panel-header">
       <h1>🎨 ArtFlow Pro</h1>
     </header>
 
     <!-- Кисти -->
-    <section class="control-group">
-      <h3 class="control-group-title">КИСТИ</h3>
+    <section class="control-group" aria-labelledby="brush-section">
+      <h3 id="brush-section" class="control-group-title">КИСТИ</h3>
       <div class="control">
-        <label class="control-label">
+        <label class="control-label" for="brushSelect">
           <span>Тип кисти</span>
         </label>
-        <select id="brushSelect"></select>
+        <select id="brushSelect" aria-describedby="brush-section"></select>
       </div>
       
       <div class="control">
-        <label class="control-label">
+        <label class="control-label" for="sizeSlider">
           <span>Размер</span>
-          <output id="sizeOut">20</output>
+          <output id="sizeOut" aria-live="polite">20</output>
         </label>
-        <input type="range" id="sizeSlider" min="1" max="100" value="20">
+        <input type="range" id="sizeSlider" min="1" max="100" value="20" aria-label="Размер кисти">
       </div>
       
       <div class="control">
-        <label class="control-label">
+        <label class="control-label" for="opacitySlider">
           <span>Прозрачность</span>
-          <output id="opacityOut">100%</output>
+          <output id="opacityOut" aria-live="polite">100%</output>
         </label>
-        <input type="range" id="opacitySlider" min="1" max="100" value="100">
+        <input type="range" id="opacitySlider" min="1" max="100" value="100" aria-label="Прозрачность кисти">
       </div>
       
       <div class="control">
-        <label class="control-label">
+        <label class="control-label" for="colorPicker">
           <span>Цвет</span>
         </label>
-        <input type="color" id="colorPicker" value="#007aff">
+        <input type="color" id="colorPicker" value="#007aff" aria-label="Выбор цвета">
       </div>
     </section>
 
     <!-- Инструменты -->
-    <section class="control-group">
-      <h3 class="control-group-title">ИНСТРУМЕНТЫ</h3>
-      <select id="toolSelect">
+    <section class="control-group" aria-labelledby="tools-section">
+      <h3 id="tools-section" class="control-group-title">ИНСТРУМЕНТЫ</h3>
+      <select id="toolSelect" aria-describedby="tools-section">
         <option value="brush">Кисть</option>
         <option value="eraser">Ластик</option>
         <option value="smudge">Смазка</option>
@@ -58,44 +58,48 @@
     </section>
 
     <!-- Слои -->
-    <section class="control-group">
-      <h3 class="control-group-title">СЛОИ</h3>
+    <section class="control-group" aria-labelledby="layers-section">
+      <h3 id="layers-section" class="control-group-title">СЛОИ</h3>
       <div class="button-group">
-        <button id="newLayerBtn">+ Новый слой</button>
-        <button id="deleteLayerBtn">- Удалить</button>
+        <button id="newLayerBtn" aria-label="Добавить новый слой">+ Новый слой</button>
+        <button id="deleteLayerBtn" aria-label="Удалить текущий слой">- Удалить</button>
       </div>
       
       <div class="control">
-        <label class="control-label">
+        <label class="control-label" for="layerSelect">
           <span>Активный слой</span>
         </label>
-        <select id="layerSelect"></select>
+        <select id="layerSelect" aria-describedby="layers-section"></select>
       </div>
       
       <div class="control">
-        <label class="control-label">
+        <label class="control-label" for="layerOpacity">
           <span>Прозрачность</span>
-          <output id="layerOpacityOut">100%</output>
+          <output id="layerOpacityOut" aria-live="polite">100%</output>
         </label>
-        <input type="range" id="layerOpacity" min="0" max="100" value="100">
+        <input type="range" id="layerOpacity" min="0" max="100" value="100" aria-label="Прозрачность слоя">
       </div>
     </section>
 
     <!-- Действия -->
-    <section class="control-group">
-      <h3 class="control-group-title">ДЕЙСТВИЯ</h3>
+    <section class="control-group" aria-labelledby="actions-section">
+      <h3 id="actions-section" class="control-group-title">ДЕЙСТВИЯ</h3>
       <div class="button-group">
-        <button id="undoBtn">↶ Отмена</button>
-        <button id="redoBtn">↷ Повтор</button>
+        <button id="undoBtn" aria-label="Отменить последнее действие">↶ Отмена</button>
+        <button id="redoBtn" aria-label="Повторить отмененное действие">↷ Повтор</button>
       </div>
-      <button id="clearBtn" class="secondary">🗑 Очистить слой</button>
-      <button id="saveBtn">💾 Сохранить PNG</button>
+      <button id="clearBtn" class="secondary" aria-label="Очистить текущий слой">🗑 Очистить слой</button>
+      <button id="saveBtn" aria-label="Сохранить рисунок">💾 Сохранить PNG</button>
     </section>
   </aside>
 
-  <main class="canvas-container">
-    <canvas id="canvas"></canvas>
-    <div class="canvas-overlay" id="canvasInfo">Готов к рисованию</div>
+  <main class="main-content" aria-label="Область рисования">
+    <div class="canvas-container">
+      <canvas id="canvas" aria-label="Холст для рисования" role="img">
+        <p>Ваш браузер не поддерживает элемент canvas. Пожалуйста, обновите браузер для использования приложения.</p>
+      </canvas>
+      <div class="canvas-overlay" id="canvasInfo" aria-live="polite">Готов к рисованию</div>
+    </div>
   </main>
 
   <script src="js/brushes.js"></script>
