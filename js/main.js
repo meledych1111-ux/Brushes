@@ -1,171 +1,163 @@
 (() => {
-  const color = document.getElementById('colorPicker');
-  const size = document.getElementById('sizeSlider');
-  const sizeOut = document.getElementById('sizeOut');
-  const opacity = document.getElementById('opacitySlider');
-  const opacityOut = document.getElementById('opacityOut');
-  const brushSelect = document.getElementById('brushSelect');
-  const clearBtn = document.getElementById('clearBtn');
-  const saveBtn = document.getElementById('saveBtn');
-  const undoBtn = document.getElementById('undoBtn');
-  const redoBtn = document.getElementById('redoBtn');
+  const { canvas, saveState, undo, redo, clearCanvas } = window.App;
 
-  /* заполняем select 100 кистей */
+  const brushSelect   = document.getElementById('brushSelect');
+  const toolSelect    = document.getElementById('toolSelect');
+  const figureSelect  = document.getElementById('figureSelect');
+  const colorPicker   = document.getElementById('colorPicker');
+  const sizeRange     = document.getElementById('sizeRange');
+  const opacityRange  = document.getElementById('opacityRange');
+
+  // Заполнение списков
   Object.keys(window.BRUSHES).forEach(name => {
-    const opt = document.createElement('option');
-    opt.value = name;
-    opt.textContent = name.charAt(0).toUpperCase() + name.slice(1);
+    const opt = document.createElement('option'); opt.value=name; opt.textContent=name;
     brushSelect.appendChild(opt);
   });
 
-  /* рисуем линию интерполированно */
-  window.drawLine = (x1, y1, x2, y2, pressure = 1) => {
-    const dx = x2 - x1, dy = y2 - y1;
-    const steps = Math.ceil(dist(x1, y1, x2, y2) / 2);
-    for (let i = 0; i <= steps; i++) {
-      const t = i / steps;
-      window.drawBrush(x1 + dx * t, y1 + dy * t, pressure);
+  ['Ластик','Смазка','Размытие','Линейка','Заливка','Стирание','Заливка (текстура)','Тень','Блик','Аниме-румянец','Аниме-блик'].forEach(name=>{
+    const opt=document.createElement('option'); opt.value=name; opt.textContent=name;
+    toolSelect.appendChild(opt);
+  });
+
+  Object.keys(window.FIGURES).forEach(name=>{
+    const opt=document.createElement('option'); opt.value=name; opt.textContent=name;
+    figureSelect.appendChild(opt);
+  });
+
+  // Состояние
+  let drawing=false;
+  let lastX=0,lastY=0;
+
+  // Pointer Events
+  canvas.addEventListener('pointerdown', e=>{
+    e.preventDefault();
+    drawing=true;
+    const rect=canvas.getBoundingClientRect();
+    lastX=e.clientX-rect.left;
+    lastY=e.clientY-rect.top;
+
+    const tool   = toolSelect.value;
+    const brush  = brushSelect.value;
+    const figure = figureSelect.value;
+    const color  = colorPicker.value;
+
+    // давление
+    let pressure = e.pressure;
+    if (!pressure || pressure <= 0) pressure = 1;
+
+    const size   = parseInt(sizeRange.value,10) * pressure;
+    const op     = parseFloat(opacityRange.value) * pressure;
+
+    const ctxActive = Layers.getActiveCtx();
+
+    if (figure !== '') {
+      window.FIGURES[figure](ctxActive, lastX, lastY, size, color, op);
+      Layers.composeLayers();
+      saveState();
+      drawing = false;
+    } else if (tool === 'Заливка') {
+      Tools.floodFill(ctxActive, Math.floor(lastX), Math.floor(lastY), hexToRgb(color));
+      drawing = false;
+    } else if (tool === 'Стирание') {
+      Tools.floodErase(ctxActive, Math.floor(lastX), Math.floor(lastY));
+      drawing = false;
+    } else if (tool === 'Заливка (текстура)') {
+      const tmp=document.createElement('canvas'); tmp.width=32; tmp.height=32;
+      const tctx=tmp.getContext('2d');
+      window.BRUSHES[brush](tctx,16,16,12,color,op);
+      Tools.floodFillTexture(ctxActive, Math.floor(lastX), Math.floor(lastY), tmp);
+      drawing = false;
     }
-  };
+  });
 
-  /* один штрих с плавным давлением */
-  window.drawBrush = (x, y, pressure = 1) => {
-    const ctx = window.getActiveCtx();
-    const baseR = +size.value;
-    const baseOp = +opacity.value;
-    // ПЛАВНОЕ ДАВЛЕНИЕ: радиус и прозрачность
-    const r = Math.max(1, baseR * pressure);
-    const op = Math.max(0.05, baseOp * pressure);
-    const col = color.value;
+  canvas.addEventListener('pointermove', e=>{
+    if (!drawing) return;
+    e.preventDefault();
 
-    // линейки (Alt)
-    if (window.altPressed && window.lastRuler) {
-      const key = document.getElementById('rulerSelect').value;
-      if (key !== 'none' && window.EXTRA2[key]) {
-        window.EXTRA2[key](ctx, window.lastRuler.x, window.lastRuler.y, x, y, col, op);
-        window.composeLayers();
-        return;
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    let pressure = e.pressure;
+    if (!pressure || pressure <= 0) pressure = 1;
+
+    const tool  = toolSelect.value;
+    const brush = brushSelect.value;
+    const color = colorPicker.value;
+    const size  = parseInt(sizeRange.value,10) * pressure;
+    const op    = parseFloat(opacityRange.value) * pressure;
+
+    const ctxActive = Layers.getActiveCtx();
+
+    if (tool === 'Ластик') {
+      Tools.eraser(ctxActive, x, y, size);
+    } else if (tool === 'Смазка') {
+      Tools.smudge(ctxActive, x, y, size);
+    } else if (tool === 'Размытие') {
+      Tools.blur(ctxActive, x, y, size);
+    } else if (tool === 'Линейка') {
+      Tools.lineTool(ctxActive, lastX, lastY, x, y, color, Math.max(1, size/4));
+    } else if (tool === 'Тень') {
+      Tools.addShadow(ctxActive, x, y, size);
+    } else if (tool === 'Блик') {
+      Tools.addHighlight(ctxActive, x, y, size);
+    } else if (tool === 'Аниме-румянец') {
+      Tools.animeBlush(ctxActive, x, y, size);
+    } else if (tool === 'Аниме-блик') {
+      Tools.animeEyeHighlight(ctxActive, x, y, size);
+    } else {
+      if (window.BRUSHES[brush]) {
+        // интерполяция для плавности
+        const steps = Math.max(1, Math.floor(Math.hypot(x-lastX, y-lastY) / 2));
+        for (let i=1; i<=steps; i++) {
+          const xi = lastX + (x-lastX)*i/steps;
+          const yi = lastY + (y-lastY)*i/steps;
+          window.BRUSHES[brush](ctxActive, xi, yi, size, color, op);
+        }
       }
     }
 
-    // базовая фигура (Shift)
-    const fig = document.getElementById('figureSelect').value;
-    if (fig !== 'none' && window.lastFigure) {
-      if (window.EXTRA[fig]) {
-        window.EXTRA[fig](ctx, window.lastFigure.x, window.lastFigure.y, x, y, col, op);
-        window.composeLayers();
-        return;
-      }
-    }
+    lastX = x; lastY = y;
+  });
 
-    // смешивание / ластик
-    const blend = document.getElementById('blendEraserSelect').value;
-    if (blend !== 'none' && window.EXTRA2[blend]) {
-      window.EXTRA2[blend](ctx, x, y, r, col, op);
-      window.composeLayers();
-      return;
-    }
+  canvas.addEventListener('pointerup', ()=>{
+    if (drawing) { Layers.composeLayers(); saveState(); drawing = false; }
+  });
+  canvas.addEventListener('pointerleave', ()=>{
+    if (drawing) { Layers.composeLayers(); saveState(); drawing = false; }
+  });
 
-    // природа
-    const nat = document.getElementById('natureSelect').value;
-    if (nat !== 'none' && window.EXTRA2[nat]) {
-      window.EXTRA2[nat](ctx, x, y, r, col, op);
-      window.composeLayers();
-      return;
-    }
+  // Кнопки
+  document.getElementById('undoBtn').addEventListener('click', undo);
+  document.getElementById('redoBtn').addEventListener('click', redo);
+  document.getElementById('clearBtn').addEventListener('click', ()=>{
+    Layers.layers.forEach(l => {
+      const w = canvas.width / window.App.getDpr();
+      const h = canvas.height / window.App.getDpr();
+      l.ctx.clearRect(0,0,w,h);
+    });
+    Layers.composeLayers();
+    saveState();
+  });
 
-    // платья
-    const dr = document.getElementById('dressSelect').value;
-    if (dr !== 'none' && window.EXTRA2[dr]) {
-      window.EXTRA2[dr](ctx, x, y, r, col, op);
-      window.composeLayers();
-      return;
-    }
-
-    // обычная кисть
-    const key = brushSelect.value;
-    window.BRUSHES[key](ctx, x, y, r, col, op);
-    window.composeLayers();
-  };
-
-  /* controls */
-  size.oninput = () => sizeOut.value = size.value;
-  opacity.oninput = () => opacityOut.value = opacity.value;
-  clearBtn.onclick = () => {
-    window.core.ctx.clearRect(0, 0, window.core.canvas.width, window.core.canvas.height);
-    window.core.saveState();
-  };
-  saveBtn.onclick = () => {
-    const link = document.createElement('a');
-    link.download = 'art_' + Date.now() + '.png';
-    link.href = window.core.canvas.toDataURL();
-    link.click();
-  };
-  undoBtn.onclick = () => window.undo();
-  redoBtn.onclick = () => window.redo();
-
-  /* слои */
-  const addLayerBtn = document.getElementById('addLayerBtn');
-  const delLayerBtn = document.getElementById('delLayerBtn');
-  const layerSelect = document.getElementById('layerSelect');
-  const layerOpacity = document.getElementById('layerOpacity');
-
-  addLayerBtn.onclick = () => {
-    const idx = window.layerData.length;
-    window.createLayer();
-    const opt = document.createElement('option');
-    opt.value = idx;
-    opt.textContent = `Layer-${idx + 1}`;
-    layerSelect.appendChild(opt);
-    layerSelect.value = idx;
-    window.setActiveLayer(idx);
-  };
-  delLayerBtn.onclick = () => {
-    if (window.layerData.length <= 1) return;
-    window.layerData.pop();
-    layerSelect.remove(layerSelect.length - 1);
-    window.setActiveLayer(window.layerData.length - 1);
-    window.composeLayers();
-  };
-  layerSelect.onchange = e => window.setActiveLayer(+e.target.value);
-  layerOpacity.oninput = e => {
-    const idx = +layerSelect.value;
-    window.setLayerOpacity(idx, +e.target.value);
-    window.composeLayers();
-  };
-
-  /* ластик */
-  const eraserBtn = document.getElementById('eraserBtn');
-  let eraserOn = false;
-  eraserBtn.onclick = () => {
-    eraserOn = !eraserOn;
-    eraserBtn.classList.toggle('eraser-on', eraserOn);
-    brushSelect.disabled = eraserOn;
-    color.disabled = eraserOn;
-  };
-
-  /* Alt / Shift состояние + сохранение pointer */
-  window.altPressed = false;
-  window.lastRuler = null;
-  window.lastFigure = null;
-  window.lastPointer = { x: 0, y: 0 };
-
-  window.addEventListener('keydown', e => {
-    if (e.key === 'Shift') {
-      const p = window.lastPointer;
-      window.lastFigure = { x: p.x, y: p.y };
-    }
-    if (e.key === 'Alt') {
-      window.altPressed = true;
-      const p = window.lastPointer;
-      window.lastRuler = { x: p.x, y: p.y };
+  // Сохранение / Поделиться
+  document.getElementById('saveBtn').addEventListener('click', ()=>{
+    Layers.composeLayers();
+    if (navigator.share && canvas.toBlob) {
+      canvas.toBlob(blob=>{
+        const file = new File([blob], "drawing.png", {type:"image/png"});
+        navigator.share({ files: [file], title: "Мой рисунок" }).catch(()=>{});
+      });
+    } else {
+      const link=document.createElement('a');
+      link.download='drawing.png';
+      link.href=canvas.toDataURL('image/png');
+      link.click();
     }
   });
-  window.addEventListener('keyup', e => {
-    if (e.key === 'Shift') window.lastFigure = null;
-    if (e.key === 'Alt') {
-      window.altPressed = false;
-      window.lastRuler = null;
-    }
-  });
+
+  function hexToRgb(hex) {
+    const bigint = parseInt(hex.slice(1),16);
+    return [(bigint>>16)&255,(bigint>>8)&255,bigint&255];
+  }
 })();
