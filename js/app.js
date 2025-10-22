@@ -9,7 +9,13 @@ window.core = (() => {
 const dist = (x1, y1, x2, y2) => Math.hypot(x2 - x1, y2 - y1);
 
   /* 0. Заглушка до загрузки main.js (чтобы не было ReferenceError) */
-  window.drawBrush = () => {};
+  window.drawBrush = (x, y, pressure = 1) => {
+  const ctx = window.core.ctx;
+  ctx.fillStyle = 'red';
+  ctx.beginPath();
+  ctx.arc(x, y, 5 * pressure, 0, Math.PI * 2);
+  ctx.fill();
+};
 
   /* 1. Отключаем поведение Safari «только стилус» */
   canvas.style.touchAction = 'none';
