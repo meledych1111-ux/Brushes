@@ -1,7 +1,5 @@
 (() => {
   const rand = n => (Math.random() - 0.5) * n;
-  const dist = (x1, y1, x2, y2) => Math.hypot(x2 - x1, y2 - y1);
-
   const BRUSHES = {
     round: (ctx, x, y, r, color, op) => {
       ctx.globalAlpha = op;
@@ -180,9 +178,9 @@
       ctx.globalAlpha = op * 0.2;
       ctx.fillStyle = 'rgba(0,0,0,0.1)';
       for (let i = 0; i < 20; i++) {
-        const px = x + rand(r);
-        const py = y + rand(r);
-        ctx.fillRect(px, py, 2, 2);
+        ctx.beginPath();
+        ctx.arc(x + rand(r), y + rand(r), 1, 0, Math.PI * 2);
+        ctx.fill();
       }
     },
     paper: (ctx, x, y, r, color, op) => BRUSHES.canvasTexture(ctx, x, y, r, color, op),
