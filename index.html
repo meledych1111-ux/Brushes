@@ -1,121 +1,55 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no"/>
-  <title>ArtFlow 250</title>
-  <link rel="stylesheet" href="css/style.css"/>
-  <meta name="theme-color" content="#ff0055">
+  <meta charset="UTF-8">
+  <title>Художественный редактор</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <aside class="panel">
-    <h1>ArtFlow 250</h1>
-
-    <label>Color
-      <input type="color" id="colorPicker" value="#ff0055">
-    </label>
-
-    <label>Size
-      <input type="range" id="sizeSlider" min="1" max="150" value="20">
-      <output id="sizeOut">20</output>
-    </label>
-
-    <label>Opacity
-      <input type="range" id="opacitySlider" min="0" max="1" step="0.05" value="1">
-      <output id="opacityOut">1</output>
-    </label>
-
-    <label>Brush
+  <div id="toolbar">
+    <label>Кисть:
       <select id="brushSelect"></select>
     </label>
-
-    <!-- Слои -->
-    <h2>Layers</h2>
-    <div class="row">
-      <button id="addLayerBtn">+ Layer</button>
-      <button id="delLayerBtn">– Layer</button>
-    </div>
-    <label>Active
-      <select id="layerSelect">
-        <option value="0">Layer-1</option>
-      </select>
+    <label>Инструмент:
+      <select id="toolSelect"></select>
     </label>
-    <label>Opacity
+    <label>Фигура:
+      <select id="figureSelect"></select>
+    </label>
+    <label>Цвет:
+      <input type="color" id="colorPicker" value="#000000">
+    </label>
+    <label>Размер:
+      <input type="range" id="sizeRange" min="1" max="100" value="20">
+    </label>
+    <label>Прозрачность:
+      <input type="range" id="opacityRange" min="0" max="1" step="0.05" value="1">
+    </label>
+
+    <button id="newLayerBtn">Новый слой</button>
+    <label>Слой:
+      <select id="layerSelect"></select>
+    </label>
+    <label>Прозрачность слоя:
       <input type="range" id="layerOpacity" min="0" max="1" step="0.05" value="1">
     </label>
 
-    <!-- Ластики / смешивание -->
-    <h2>Color blend & erasers</h2>
-    <select id="blendEraserSelect">
-      <option value="none">None</option>
-      <optgroup label="Blend">
-        <option value="blend-water">Water blend</option>
-        <option value="blend-oil">Oil blend</option>
-        <option value="blend-gradient">Gradient blend</option>
-        <option value="blend-smudge">Smudge+</option>
-        <option value="blend-charge">Color-charge</option>
-      </optgroup>
-      <optgroup label="Erasers+">
-        <option value="eraser-fabric">Fabric eraser</option>
-        <option value="eraser-ink">Ink eraser</option>
-        <option value="eraser-light">Light ray</option>
-        <option value="eraser-crystal">Crystal shards</option>
-        <option value="eraser-sand">Sand blast</option>
-      </optgroup>
-    </select>
-    <button id="eraserBtn">🧹 Eraser On</button>
+    <button id="undoBtn">Отмена</button>
+    <button id="redoBtn">Повтор</button>
+    <button id="clearBtn">Очистить</button>
+    <button id="saveBtn">Сохранить</button>
+  </div>
 
-    <!-- Природа -->
-    <h2>Nature</h2>
-    <select id="natureSelect">
-      <option value="none">None</option>
-      <option value="grass">Grass</option>
-      <option value="leaves">Leaves</option>
-      <option value="bark">Bark</option>
-      <option value="stones">Stones</option>
-      <option value="water">Water</option>
-      <option value="clouds">Clouds</option>
-      <option value="snow">Snow</option>
-      <option value="sand">Sand</option>
-    </select>
-
-    <!-- Дизайн платьев -->
-    <h2>Dress design</h2>
-    <select id="dressSelect">
-      <option value="none">None</option>
-      <option value="silk">Silk</option>
-      <option value="velvet-d">Velvet</option>
-      <option value="lace">Lace</option>
-      <option value="embroidery">Embroidery</option>
-      <option value="sequins">Sequins</option>
-      <option value="drapery">Drapery</option>
-    </select>
-
-    <!-- Линейки (Alt) -->
-    <h2>Rulers (Hold Alt)</h2>
-    <select id="rulerSelect">
-      <option value="none">Free</option>
-      <option value="line">Line</option>
-      <option value="square">Square</option>
-      <option value="compass">Compass</option>
-      <option value="bezier">Bezier</option>
-      <option value="grid">Grid</option>
-    </select>
-
-    <div class="row">
-      <button id="undoBtn">↶ Undo</button>
-      <button id="redoBtn">↷ Redo</button>
-    </div>
-    <button id="clearBtn">🗑 Clear</button>
-    <button id="saveBtn">💾 Save PNG</button>
-  </aside>
-
-  <canvas id="canvas"></canvas>
+  <div id="canvasContainer">
+    <canvas id="mainCanvas"></canvas>
+  </div>
 
   <script src="js/app.js"></script>
+  <script src="js/layers.js"></script>
   <script src="js/brushes.js"></script>
   <script src="js/extra.js"></script>
-  <script src="js/extra2.js"></script>
+  <script src="js/tools.js"></script>
   <script src="js/main.js"></script>
 </body>
 </html>
