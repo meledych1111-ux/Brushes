@@ -1,4 +1,4 @@
-// js/app.js - ПОЛНОСТЬЮ РАБОЧАЯ ВЕРСИЯ С ВСЕМИ МОДУЛЯМИ
+// js/app.js - ИСПРАВЛЕННАЯ ВЕРСИЯ
 (() => {
     console.log('🔄 Starting ArtFlow Pro...');
 
@@ -147,7 +147,8 @@
             painting = false;
             saveState();
         } else {
-            // Обычное рисование кистью
+            // Обычное рисование кистью - сохраняем состояние ПЕРЕД началом рисования
+            saveState();
             drawBrush(pos.x, pos.y);
         }
     }
@@ -183,6 +184,9 @@
                 drawFinalShape(startX, startY, pos.x, pos.y);
                 isDrawingShape = false;
                 saveState();
+            } else if (currentTool === 'brush' || currentTool === 'eraser') {
+                // Для кисти и ластика сохраняем состояние ПОСЛЕ завершения рисования
+                saveState();
             }
             
             painting = false;
@@ -214,6 +218,8 @@
             painting = false;
             saveState();
         } else {
+            // Сохраняем состояние перед рисованием
+            saveState();
             drawBrush(pos.x, pos.y);
         }
     }
@@ -246,6 +252,8 @@
             if (isDrawingTool(currentTool) && isDrawingShape) {
                 drawFinalShape(startX, startY, pos.x, pos.y);
                 isDrawingShape = false;
+                saveState();
+            } else if (currentTool === 'brush' || currentTool === 'eraser') {
                 saveState();
             }
             
@@ -312,6 +320,15 @@
                 } else {
                     drawFallbackBrush(ctxActive, x, y, size, color, opacity);
                 }
+            } else if (currentTool === 'eraser') {
+                // Ластик - рисуем белым цветом
+                ctxActive.save();
+                ctxActive.globalCompositeOperation = 'destination-out';
+                ctxActive.globalAlpha = opacity;
+                ctxActive.beginPath();
+                ctxActive.arc(x, y, size, 0, Math.PI * 2);
+                ctxActive.fill();
+                ctxActive.restore();
             } else if (window.Tools && window.Tools[currentTool]) {
                 window.Tools[currentTool](ctxActive, x, y, size, color, opacity);
             } else {
@@ -404,11 +421,16 @@
 
     // === ИСТОРИЯ ДЕЙСТВИЙ ===
     function saveState() {
-        history.length = historyStep;
-        history.push(canvas.toDataURL());
-        if (history.length > 50) history.shift();
-        historyStep = history.length;
-        updateUndoRedoButtons();
+        // Сохраняем только если состояние изменилось
+        const currentState = canvas.toDataURL();
+        if (history.length === 0 || history[history.length - 1] !== currentState) {
+            history.length = historyStep;
+            history.push(currentState);
+            if (history.length > 50) history.shift();
+            historyStep = history.length;
+            updateUndoRedoButtons();
+            console.log('💾 State saved to history');
+        }
     }
 
     function undo() {
@@ -416,6 +438,7 @@
             historyStep--;
             restoreState();
             updateUndoRedoButtons();
+            console.log('↩️ Undo to step:', historyStep);
         }
     }
 
@@ -424,6 +447,7 @@
             historyStep++;
             restoreState();
             updateUndoRedoButtons();
+            console.log('↪️ Redo to step:', historyStep);
         }
     }
 
